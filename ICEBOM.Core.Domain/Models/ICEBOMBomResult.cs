@@ -9,6 +9,8 @@ namespace ICEBOM.Core.Domain.Models
 
         public string Status { get; set; } = "ready";
 
+        public List<ICEBOMBomLineResult> Lines { get; set; } = new();
+
         public ICEBOMActionEnum Action { get; set; }
 
         public List<ICEBOMError> Errors { get; set; } = new();

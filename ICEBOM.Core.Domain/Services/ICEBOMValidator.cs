@@ -1,5 +1,6 @@
 ﻿using ICEBOM.Core.Domain.Enums;
 using ICEBOM.Core.Domain.Models;
+using ICEBOM.Core.Domain.Normalizers;
 using ICEBOM.Core.Domain.Repositories;
 
 namespace ICEBOM.Core.Domain.Services
@@ -31,7 +32,7 @@ namespace ICEBOM.Core.Domain.Services
             if (string.IsNullOrWhiteSpace(component.Name))
                 result.Errors.Add(CreateError("COMPONENT_MISSING_NAME", $"El componente '{component.InternalId}' no tiene nombre."));
 
-            if (string.IsNullOrWhiteSpace(component.Classification.FunctionalType))
+            if (component.Classification.FunctionalType == ICEBOMFunctionalTypeEnum.Unknown)
                 result.Errors.Add(CreateError("COMPONENT_MISSING_FUNCTIONAL_TYPE", $"El componente '{component.InternalId}' no tiene tipo funcional."));
 
             result.Status = result.Errors.Count > 0 ? "blocked" : "ready";
@@ -83,6 +84,12 @@ namespace ICEBOM.Core.Domain.Services
                 .Where(r => !string.IsNullOrWhiteSpace(r))
                 .ToHashSet();
 
+            var bomLineReferences = request.Boms
+                .SelectMany(b => b.Lines)
+                .Select(l => l.ComponentReference)
+                .Where(r => !string.IsNullOrWhiteSpace(r))
+                .ToHashSet();
+
             foreach (var comp in response.Components)
             {
                 var requestComp = request.Components
@@ -92,23 +99,43 @@ namespace ICEBOM.Core.Domain.Services
                     continue;
 
                 var functionalType = requestComp.Classification.FunctionalType;
-
                 var hasBom = bomProducts.Contains(comp.Reference);
 
-                // 🔴 Regla 1: Commercial no puede tener BOM
-                if (functionalType == "commercial" && hasBom)
+                if (functionalType == ICEBOMFunctionalTypeEnum.Commercial && hasBom)
                 {
                     comp.Errors.Add(CreateError(
                         "INVALID_COMMERCIAL_WITH_BOM",
                         $"El componente '{comp.Reference}' es comercial pero tiene BOM."));
                 }
 
-                // 🔴 Regla 2: Manufactured debe tener BOM
-                if (functionalType == "manufactured" && !hasBom)
+                if (functionalType == ICEBOMFunctionalTypeEnum.Manufactured && !hasBom)
                 {
                     comp.Errors.Add(CreateError(
                         "MANUFACTURED_WITHOUT_BOM",
                         $"El componente '{comp.Reference}' es fabricado pero no tiene BOM."));
+                }
+
+                if (requestComp.Control.IgnoreChildren && hasBom)
+                {
+                    comp.Warnings.Add(new ICEBOMWarning
+                    {
+                        Code = "IGNORE_CHILDREN_WITH_BOM",
+                        Message = $"El componente '{comp.Reference}' tiene IgnorarHijos=true, pero se ha recibido una BOM para él. La BOM será omitida."
+                    });
+                }
+
+                if (!requestComp.Control.ExportErp && hasBom)
+                {
+                    comp.Errors.Add(CreateError(
+                        "NON_EXPORTABLE_COMPONENT_WITH_BOM",
+                        $"El componente '{comp.Reference}' tiene ExportarERP=false, pero se ha recibido una BOM para él."));
+                }
+
+                if (!requestComp.Control.ExportErp && bomLineReferences.Contains(comp.Reference))
+                {
+                    comp.Errors.Add(CreateError(
+                        "NON_EXPORTABLE_COMPONENT_USED_IN_BOM",
+                        $"El componente '{comp.Reference}' tiene ExportarERP=false, pero se usa como línea de BOM."));
                 }
             }
         }
@@ -135,6 +162,36 @@ namespace ICEBOM.Core.Domain.Services
 
                 foreach (var line in requestBom.Lines)
                 {
+                    var lineResult = new ICEBOMBomLineResult
+                    {
+                        ComponentInternalId = line.ComponentInternalId,
+                        ComponentReference = line.ComponentReference,
+                        Quantity = line.Quantity,
+                        OriginalUnit = line.Unit,
+                        NormalizedUnit = ICEBOMUnitNormalizer.Normalize(line.Unit)
+                    };
+
+                    var normalizedUnit = ICEBOMUnitNormalizer.Normalize(line.Unit);
+
+                    if (string.IsNullOrWhiteSpace(line.Unit))
+                    {
+                        bomResult.Warnings.Add(new ICEBOMWarning
+                        {
+                            Code = "BOM_LINE_MISSING_UNIT",
+                            Message = $"La BOM '{requestBom.BomId}' contiene una línea sin unidad. Se usará la unidad por defecto 'Ud'."
+                        });
+                    }
+                    else if (!ICEBOMUnitNormalizer.IsKnown(line.Unit))
+                    {
+                        bomResult.Warnings.Add(new ICEBOMWarning
+                        {
+                            Code = "BOM_LINE_UNKNOWN_UNIT",
+                            Message = $"La BOM '{requestBom.BomId}' contiene una unidad no reconocida: '{line.Unit}'."
+                        });
+                    }
+
+                    line.Unit = normalizedUnit;
+
                     if (string.IsNullOrWhiteSpace(line.ComponentInternalId))
                     {
                         bomResult.Errors.Add(CreateError(
@@ -170,15 +227,6 @@ namespace ICEBOM.Core.Domain.Services
                         bomResult.Errors.Add(CreateError(
                             "BOM_LINE_INVALID_QUANTITY",
                             $"La BOM '{requestBom.BomId}' contiene una línea con cantidad inválida: {line.Quantity}."));
-                    }
-
-                    if (string.IsNullOrWhiteSpace(line.Unit))
-                    {
-                        bomResult.Warnings.Add(new ICEBOMWarning
-                        {
-                            Code = "BOM_LINE_MISSING_UNIT",
-                            Message = $"La BOM '{requestBom.BomId}' contiene una línea sin unidad. Se usará la unidad por defecto."
-                        });
                     }
                 }
 

@@ -47,10 +47,7 @@ namespace ICEBOM.Core.Domain.Services
 
             for (int i = 0; i < request.Boms.Count; i++)
             {
-                _decisionEngine.DecideBom(
-                    request.Boms[i],
-                    response.Boms[i],
-                    request.SettingsSnapshot);
+                _decisionEngine.DecideBom(request, request.Boms[i], response.Boms[i], request.SettingsSnapshot);
             }
 
             CalculateSummary(response);

@@ -13,15 +13,19 @@ namespace ICEBOM.Core.Domain.Services
             _odooRepository = odooRepository;
         }
 
-        public void DecideComponent(
-            ICEBOMComponent component,
-            ICEBOMComponentResult result,
-            ICEBOMSettingsSnapshot settings)
+        public void DecideComponent(ICEBOMComponent component, ICEBOMComponentResult result, ICEBOMSettingsSnapshot settings)
         {
             if (result.Errors.Count > 0)
             {
                 result.Status = "blocked";
                 result.Action = ICEBOMActionEnum.Blocked;
+                return;
+            }
+
+            if (!component.Control.ExportErp)
+            {
+                result.Status = "ready";
+                result.Action = ICEBOMActionEnum.Skip;
                 return;
             }
 
@@ -47,15 +51,21 @@ namespace ICEBOM.Core.Domain.Services
             result.Status = "ready";
         }
 
-        public void DecideBom(
-            ICEBOMBom bom,
-            ICEBOMBomResult result,
-            ICEBOMSettingsSnapshot settings)
+        public void DecideBom(ICEBOMRequest request, ICEBOMBom bom, ICEBOMBomResult result, ICEBOMSettingsSnapshot settings)
         {
             if (result.Errors.Count > 0)
             {
                 result.Status = "blocked";
                 result.Action = ICEBOMActionEnum.Blocked;
+                return;
+            }
+
+            var parentComponent = request.Components.FirstOrDefault(c => c.InternalId == bom.SourceComponentId);
+
+            if (parentComponent?.Control.IgnoreChildren == true)
+            {
+                result.Status = "ready";
+                result.Action = ICEBOMActionEnum.Skip;
                 return;
             }
 

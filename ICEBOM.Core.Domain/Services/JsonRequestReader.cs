@@ -1,7 +1,10 @@
 ﻿using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
+using ICEBOM.Core.Domain.Enums;
 using ICEBOM.Core.Domain.Models;
+using ICEBOM.Core.Domain.Serialization;
 
 namespace ICEBOM.Core.App.Services
 {
@@ -15,6 +18,8 @@ namespace ICEBOM.Core.App.Services
             {
                 PropertyNameCaseInsensitive = true
             };
+
+            options.Converters.Add(new SafeEnumConverter<ICEBOMFunctionalTypeEnum>(ICEBOMFunctionalTypeEnum.Unknown));
 
             var request = JsonSerializer.Deserialize<ICEBOMRequest>(json, options);
 
