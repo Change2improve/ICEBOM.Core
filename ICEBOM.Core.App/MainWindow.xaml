@@ -104,6 +104,41 @@
                 </DataGrid>
             </TabItem>
 
+            <TabItem Header="Líneas BOM">
+                <DataGrid x:Name="BomLinesGrid"
+              Margin="12"
+              AutoGenerateColumns="False"
+              IsReadOnly="True">
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Status}" Value="blocked">
+                                    <Setter Property="Background" Value="#F8D7DA"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Status}" Value="warning">
+                                    <Setter Property="Background" Value="#FFF3CD"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Status}" Value="ready">
+                                    <Setter Property="Background" Value="#D1E7DD"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.RowStyle>
+
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="BOM ID" Binding="{Binding BomId}" Width="110"/>
+                        <DataGridTextColumn Header="Internal ID" Binding="{Binding ComponentInternalId}" Width="120"/>
+                        <DataGridTextColumn Header="Referencia" Binding="{Binding ComponentReference}" Width="120"/>
+                        <DataGridTextColumn Header="Cantidad" Binding="{Binding Quantity}" Width="90"/>
+                        <DataGridTextColumn Header="Unidad original" Binding="{Binding OriginalUnit}" Width="120"/>
+                        <DataGridTextColumn Header="Unidad normalizada" Binding="{Binding NormalizedUnit}" Width="140"/>
+                        <DataGridTextColumn Header="Estado" Binding="{Binding Status}" Width="100"/>
+                        <DataGridTextColumn Header="Errores" Binding="{Binding ErrorsText}" Width="*"/>
+                        <DataGridTextColumn Header="Avisos" Binding="{Binding WarningsText}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </TabItem>
+
             <TabItem Header="Mensajes">
                 <DataGrid x:Name="MessagesGrid"
               Margin="12"

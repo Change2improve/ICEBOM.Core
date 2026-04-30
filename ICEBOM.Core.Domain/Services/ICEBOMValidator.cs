@@ -162,72 +162,102 @@ namespace ICEBOM.Core.Domain.Services
 
                 foreach (var line in requestBom.Lines)
                 {
+                    var originalUnit = line.Unit;
+                    var normalizedUnit = ICEBOMUnitNormalizer.Normalize(line.Unit);
+
                     var lineResult = new ICEBOMBomLineResult
                     {
                         ComponentInternalId = line.ComponentInternalId,
                         ComponentReference = line.ComponentReference,
                         Quantity = line.Quantity,
-                        OriginalUnit = line.Unit,
-                        NormalizedUnit = ICEBOMUnitNormalizer.Normalize(line.Unit)
+                        OriginalUnit = originalUnit,
+                        NormalizedUnit = normalizedUnit
                     };
-
-                    var normalizedUnit = ICEBOMUnitNormalizer.Normalize(line.Unit);
 
                     if (string.IsNullOrWhiteSpace(line.Unit))
                     {
-                        bomResult.Warnings.Add(new ICEBOMWarning
+                        var warning = new ICEBOMWarning
                         {
                             Code = "BOM_LINE_MISSING_UNIT",
                             Message = $"La BOM '{requestBom.BomId}' contiene una línea sin unidad. Se usará la unidad por defecto 'Ud'."
-                        });
+                        };
+
+                        bomResult.Warnings.Add(warning);
+                        lineResult.Warnings.Add(warning);
                     }
                     else if (!ICEBOMUnitNormalizer.IsKnown(line.Unit))
                     {
-                        bomResult.Warnings.Add(new ICEBOMWarning
+                        var warning = new ICEBOMWarning
                         {
                             Code = "BOM_LINE_UNKNOWN_UNIT",
                             Message = $"La BOM '{requestBom.BomId}' contiene una unidad no reconocida: '{line.Unit}'."
-                        });
+                        };
+
+                        bomResult.Warnings.Add(warning);
+                        lineResult.Warnings.Add(warning);
                     }
 
                     line.Unit = normalizedUnit;
 
                     if (string.IsNullOrWhiteSpace(line.ComponentInternalId))
                     {
-                        bomResult.Errors.Add(CreateError(
+                        var error = CreateError(
                             "BOM_LINE_MISSING_COMPONENT_INTERNAL_ID",
-                            $"La BOM '{requestBom.BomId}' tiene una línea sin identificador interno de componente."));
+                            $"La BOM '{requestBom.BomId}' tiene una línea sin identificador interno de componente.");
+
+                        bomResult.Errors.Add(error);
+                        lineResult.Errors.Add(error);
                     }
 
                     if (string.IsNullOrWhiteSpace(line.ComponentReference))
                     {
-                        bomResult.Errors.Add(CreateError(
+                        var error = CreateError(
                             "BOM_LINE_MISSING_COMPONENT_REFERENCE",
-                            $"La BOM '{requestBom.BomId}' tiene una línea sin referencia de componente."));
+                            $"La BOM '{requestBom.BomId}' tiene una línea sin referencia de componente.");
+
+                        bomResult.Errors.Add(error);
+                        lineResult.Errors.Add(error);
                     }
 
                     if (!string.IsNullOrWhiteSpace(line.ComponentInternalId) &&
                         !componentIds.Contains(line.ComponentInternalId))
                     {
-                        bomResult.Errors.Add(CreateError(
+                        var error = CreateError(
                             "BOM_LINE_COMPONENT_ID_NOT_FOUND",
-                            $"La BOM '{requestBom.BomId}' contiene el componente '{line.ComponentInternalId}', pero no existe en el catálogo."));
+                            $"La BOM '{requestBom.BomId}' contiene el componente '{line.ComponentInternalId}', pero no existe en el catálogo.");
+
+                        bomResult.Errors.Add(error);
+                        lineResult.Errors.Add(error);
                     }
 
                     if (!string.IsNullOrWhiteSpace(line.ComponentReference) &&
                         !componentReferences.Contains(line.ComponentReference))
                     {
-                        bomResult.Errors.Add(CreateError(
+                        var error = CreateError(
                             "BOM_LINE_COMPONENT_REFERENCE_NOT_FOUND",
-                            $"La BOM '{requestBom.BomId}' contiene la referencia '{line.ComponentReference}', pero no existe en el catálogo."));
+                            $"La BOM '{requestBom.BomId}' contiene la referencia '{line.ComponentReference}', pero no existe en el catálogo.");
+
+                        bomResult.Errors.Add(error);
+                        lineResult.Errors.Add(error);
                     }
 
                     if (line.Quantity <= 0)
                     {
-                        bomResult.Errors.Add(CreateError(
+                        var error = CreateError(
                             "BOM_LINE_INVALID_QUANTITY",
-                            $"La BOM '{requestBom.BomId}' contiene una línea con cantidad inválida: {line.Quantity}."));
+                            $"La BOM '{requestBom.BomId}' contiene una línea con cantidad inválida: {line.Quantity}.");
+
+                        bomResult.Errors.Add(error);
+                        lineResult.Errors.Add(error);
                     }
+
+                    lineResult.Status = lineResult.Errors.Count > 0
+                        ? "blocked"
+                        : lineResult.Warnings.Count > 0
+                            ? "warning"
+                            : "ready";
+
+                    bomResult.Lines.Add(lineResult);
                 }
 
                 if (bomResult.Errors.Count > 0)
