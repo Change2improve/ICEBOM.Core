@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36915.13 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ICEBOM.Core.App", "ICEBOM.Core.App\ICEBOM.Core.App.csproj", "{5887BEE1-682D-4657-8FF7-C5BFF4A6EAFF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ICEBOM.Core.Domain", "ICEBOM.Core.Domain\ICEBOM.Core.Domain.csproj", "{C3F675B4-E960-4AC4-A665-9ECA10F675BC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5887BEE1-682D-4657-8FF7-C5BFF4A6EAFF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5887BEE1-682D-4657-8FF7-C5BFF4A6EAFF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5887BEE1-682D-4657-8FF7-C5BFF4A6EAFF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5887BEE1-682D-4657-8FF7-C5BFF4A6EAFF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C3F675B4-E960-4AC4-A665-9ECA10F675BC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C3F675B4-E960-4AC4-A665-9ECA10F675BC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C3F675B4-E960-4AC4-A665-9ECA10F675BC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C3F675B4-E960-4AC4-A665-9ECA10F675BC}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {32E1B59E-C4AC-47D2-9B82-E351F6FC8C64}
+	EndGlobalSection
+EndGlobal

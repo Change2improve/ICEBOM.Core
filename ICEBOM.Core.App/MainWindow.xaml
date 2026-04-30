@@ -1,0 +1,122 @@
+﻿<Window x:Class="ICEBOM.Core.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="ICEBOM Core" Height="650" Width="1000">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0">
+            <TextBlock Text="ICEBOM Core"
+                       FontSize="24"
+                       FontWeight="Bold"
+                       Margin="0,0,0,16"/>
+
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                <Button Content="Seleccionar JSON"
+                        Width="160"
+                        Height="36"
+                        Margin="0,0,8,0"
+                        Click="SelectJson_Click"/>
+
+                <Button Content="Procesar JSON"
+                        Width="160"
+                        Height="36"
+                        Click="ProcessJson_Click"/>
+            </StackPanel>
+
+            <TextBlock Text="Archivo seleccionado:" FontWeight="Bold"/>
+            <TextBlock x:Name="SelectedFileText"
+                       Text="Ningún archivo seleccionado"
+                       Margin="0,4,0,16"
+                       TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <TabControl Grid.Row="1">
+            <TabItem Header="Resumen">
+                <TextBlock x:Name="ResultText"
+                           Margin="12"
+                           FontSize="14"
+                           TextWrapping="Wrap"/>
+            </TabItem>
+
+            <TabItem Header="Componentes">
+                <DataGrid x:Name="ComponentsGrid"
+                          Margin="12"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True">
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Status}" Value="blocked">
+                                    <Setter Property="Background" Value="#F8D7DA"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Status}" Value="warning">
+                                    <Setter Property="Background" Value="#FFF3CD"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Status}" Value="ready">
+                                    <Setter Property="Background" Value="#D1E7DD"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.RowStyle>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Internal ID" Binding="{Binding InternalId}" Width="120"/>
+                        <DataGridTextColumn Header="Referencia" Binding="{Binding Reference}" Width="120"/>
+                        <DataGridTextColumn Header="Estado" Binding="{Binding Status}" Width="100"/>
+                        <DataGridTextColumn Header="Acción" Binding="{Binding Action}" Width="150"/>
+                        <DataGridTextColumn Header="Errores" Binding="{Binding ErrorsText}" Width="*"/>
+                        <DataGridTextColumn Header="Avisos" Binding="{Binding WarningsText}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </TabItem>
+
+            <TabItem Header="BOMs">
+                <DataGrid x:Name="BomsGrid"
+                          Margin="12"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True">
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Status}" Value="blocked">
+                                    <Setter Property="Background" Value="#F8D7DA"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Status}" Value="warning">
+                                    <Setter Property="Background" Value="#FFF3CD"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Status}" Value="ready">
+                                    <Setter Property="Background" Value="#D1E7DD"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.RowStyle>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="BOM ID" Binding="{Binding BomId}" Width="120"/>
+                        <DataGridTextColumn Header="Producto" Binding="{Binding ProductReference}" Width="140"/>
+                        <DataGridTextColumn Header="Estado" Binding="{Binding Status}" Width="100"/>
+                        <DataGridTextColumn Header="Acción" Binding="{Binding Action}" Width="150"/>
+                        <DataGridTextColumn Header="Errores" Binding="{Binding ErrorsText}" Width="*"/>
+                        <DataGridTextColumn Header="Avisos" Binding="{Binding WarningsText}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </TabItem>
+
+            <TabItem Header="Mensajes">
+                <DataGrid x:Name="MessagesGrid"
+              Margin="12"
+              AutoGenerateColumns="False"
+              IsReadOnly="True">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Tipo" Binding="{Binding Type}" Width="100"/>
+                        <DataGridTextColumn Header="Código" Binding="{Binding Code}" Width="180"/>
+                        <DataGridTextColumn Header="Mensaje" Binding="{Binding Message}" Width="*"/>
+                        <DataGridTextColumn Header="Origen" Binding="{Binding Source}" Width="180"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</Window>
