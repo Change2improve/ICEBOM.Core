@@ -21,7 +21,7 @@ namespace ICEBOM.Core.App
         {
             var dialog = new OpenFileDialog
             {
-                Title = "Seleccionar AutoBOM_Request.json",
+                Title = "Seleccionar ICEBOM_Request.json",
                 Filter = "Archivos JSON (*.json)|*.json|Todos los archivos (*.*)|*.*"
             };
 
@@ -51,7 +51,7 @@ namespace ICEBOM.Core.App
                 var requestReader = new JsonRequestReader();
                 var request = requestReader.Read(_selectedJsonPath);
 
-                var processor = new AutoBOMProcessor();
+                var processor = new ICEBOMProcessor();
                 var response = processor.Process(request);
 
                 var responseWriter = new ResponseWriter();
@@ -62,7 +62,7 @@ namespace ICEBOM.Core.App
                     InternalId = c.InternalId,
                     Reference = c.Reference,
                     Status = c.Status,
-                    Action = c.Action,
+                    Action = c.Action.ToString(),
                     ErrorsText = string.Join(" | ", c.Errors.Select(e => e.Message)),
                     WarningsText = string.Join(" | ", c.Warnings.Select(w => w.Message))
                 }).ToList();
@@ -72,7 +72,7 @@ namespace ICEBOM.Core.App
                     BomId = b.BomId,
                     ProductReference = b.ProductReference,
                     Status = b.Status,
-                    Action = b.Action,
+                    Action = b.Action.ToString(),
                     ErrorsText = string.Join(" | ", b.Errors.Select(e => e.Message)),
                     WarningsText = string.Join(" | ", b.Warnings.Select(w => w.Message))
                 }).ToList();

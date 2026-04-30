@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using ICEBOM.Core.Domain.Enums;
+
 namespace ICEBOM.Core.App.ViewModels
 {
     public class BomResultView

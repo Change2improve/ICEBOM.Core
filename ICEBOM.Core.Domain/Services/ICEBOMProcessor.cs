@@ -1,17 +1,18 @@
 ﻿using System;
 
+using ICEBOM.Core.Domain.Enums;
 using ICEBOM.Core.Domain.Models;
 
 namespace ICEBOM.Core.Domain.Services
 {
-    public class AutoBOMProcessor
+    public class ICEBOMProcessor
     {
-        public AutoBOMResponse Process(AutoBOMRequest request)
+        public ICEBOMResponse Process(ICEBOMRequest request)
         {
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
 
-            var response = new AutoBOMResponse
+            var response = new ICEBOMResponse
             {
                 Meta =
                 {
@@ -36,13 +37,13 @@ namespace ICEBOM.Core.Domain.Services
             return response;
         }
 
-        private static AutoBOMComponentResult ValidateComponent(AutoBOMComponent component)
+        private static ICEBOMComponentResult ValidateComponent(ICEBOMComponent component)
         {
-            var result = new AutoBOMComponentResult
+            var result = new ICEBOMComponentResult
             {
                 InternalId = component.InternalId,
                 Reference = component.Reference,
-                Action = "validation_only"
+                Action = ICEBOMActionEnum.ValidationOnly
             };
 
             if (string.IsNullOrWhiteSpace(component.InternalId))
@@ -57,18 +58,27 @@ namespace ICEBOM.Core.Domain.Services
             if (string.IsNullOrWhiteSpace(component.Classification.FunctionalType))
                 result.Errors.Add(CreateError("COMPONENT_MISSING_FUNCTIONAL_TYPE", $"El componente '{component.InternalId}' no tiene tipo funcional."));
 
-            result.Status = result.Errors.Count > 0 ? "blocked" : "ready";
+            if (result.Errors.Count > 0)
+            {
+                result.Status = "blocked";
+                result.Action = ICEBOMActionEnum.Blocked;
+            }
+            else
+            {
+                result.Status = "ready";
+                result.Action = ICEBOMActionEnum.Create;
+            }
 
             return result;
         }
 
-        private static AutoBOMBomResult ValidateBom(AutoBOMBom bom)
+        private static ICEBOMBomResult ValidateBom(ICEBOMBom bom)
         {
-            var result = new AutoBOMBomResult
+            var result = new ICEBOMBomResult
             {
                 BomId = bom.BomId,
                 ProductReference = bom.ProductReference,
-                Action = "validation_only"
+                Action = ICEBOMActionEnum.ValidationOnly
             };
 
             if (string.IsNullOrWhiteSpace(bom.BomId))
@@ -83,21 +93,30 @@ namespace ICEBOM.Core.Domain.Services
             if (bom.Lines == null || bom.Lines.Count == 0)
                 result.Errors.Add(CreateError("BOM_MISSING_LINES", $"La BOM '{bom.BomId}' no tiene líneas."));
 
-            result.Status = result.Errors.Count > 0 ? "blocked" : "ready";
+            if (result.Errors.Count > 0)
+            {
+                result.Status = "blocked";
+                result.Action = ICEBOMActionEnum.Blocked;
+            }
+            else
+            {
+                result.Status = "ready";
+                result.Action = ICEBOMActionEnum.Create;
+            }
 
             return result;
         }
 
-        private static AutoBOMError CreateError(string code, string message)
+        private static ICEBOMError CreateError(string code, string message)
         {
-            return new AutoBOMError
+            return new ICEBOMError
             {
                 Code = code,
                 Message = message
             };
         }
 
-        private static void CalculateSummary(AutoBOMResponse response)
+        private static void CalculateSummary(ICEBOMResponse response)
         {
             response.Summary.ErrorsCount = 0;
             response.Summary.WarningsCount = 0;

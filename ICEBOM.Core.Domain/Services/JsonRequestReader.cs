@@ -7,7 +7,7 @@ namespace ICEBOM.Core.App.Services
 {
     public class JsonRequestReader
     {
-        public AutoBOMRequest Read(string filePath)
+        public ICEBOMRequest Read(string filePath)
         {
             var json = File.ReadAllText(filePath);
 
@@ -16,7 +16,7 @@ namespace ICEBOM.Core.App.Services
                 PropertyNameCaseInsensitive = true
             };
 
-            var request = JsonSerializer.Deserialize<AutoBOMRequest>(json, options);
+            var request = JsonSerializer.Deserialize<ICEBOMRequest>(json, options);
 
             if (request == null)
                 throw new InvalidOperationException("No se pudo deserializar el archivo JSON.");

@@ -7,11 +7,11 @@ namespace ICEBOM.Core.App.Services
 {
     public class ResponseWriter
     {
-        public string Write(string requestFilePath, AutoBOMResponse response)
+        public string Write(string requestFilePath, ICEBOMResponse response)
         {
             var responsePath = Path.Combine(
                 Path.GetDirectoryName(requestFilePath)!,
-                "AutoBOM_Response.json");
+                "ICEBOM_Response.json");
 
             var responseJson = JsonSerializer.Serialize(response, new JsonSerializerOptions
             {
