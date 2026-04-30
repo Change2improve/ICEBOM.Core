@@ -1,12 +1,18 @@
-﻿using System;
-
-using ICEBOM.Core.Domain.Enums;
+﻿using ICEBOM.Core.Domain.Enums;
 using ICEBOM.Core.Domain.Models;
+using ICEBOM.Core.Domain.Repositories;
 
 namespace ICEBOM.Core.Domain.Services
 {
     public class ICEBOMProcessor
     {
+        private readonly FakeOdooRepository _odooRepository;
+
+        public ICEBOMProcessor()
+        {
+            _odooRepository = new FakeOdooRepository();
+        }
+
         public ICEBOMResponse Process(ICEBOMRequest request)
         {
             if (request == null)
@@ -17,7 +23,8 @@ namespace ICEBOM.Core.Domain.Services
                 Meta =
                 {
                     RequestExportId = request.Meta.ExportId,
-                    ProcessDate = DateTime.Now
+                    ProcessDate = DateTime.Now,
+                    CoreVersion = typeof(ICEBOMProcessor).Assembly.GetName().Version?.ToString() ?? "unknown"
                 },
                 Summary =
                 {
@@ -27,17 +34,20 @@ namespace ICEBOM.Core.Domain.Services
             };
 
             foreach (var component in request.Components)
-                response.Components.Add(ValidateComponent(component));
+                response.Components.Add(ValidateComponent(component, request.SettingsSnapshot));
 
             foreach (var bom in request.Boms)
-                response.Boms.Add(ValidateBom(bom));
+                response.Boms.Add(ValidateBom(bom, request.SettingsSnapshot));
+
+            ValidateBusinessRules(request, response);
+            ValidateBomLines(request, response);
 
             CalculateSummary(response);
 
             return response;
         }
 
-        private static ICEBOMComponentResult ValidateComponent(ICEBOMComponent component)
+        private ICEBOMComponentResult ValidateComponent(ICEBOMComponent component, ICEBOMSettingsSnapshot settings)
         {
             var result = new ICEBOMComponentResult
             {
@@ -65,14 +75,34 @@ namespace ICEBOM.Core.Domain.Services
             }
             else
             {
-                result.Status = "ready";
-                result.Action = ICEBOMActionEnum.Create;
+                var existsInOdoo = _odooRepository.ProductExists(component.Reference);
+
+                if (existsInOdoo && settings.UpdateExistingProducts)
+                {
+                    result.Status = "ready";
+                    result.Action = ICEBOMActionEnum.Update;
+                }
+                else if (existsInOdoo && !settings.UpdateExistingProducts)
+                {
+                    result.Status = "ready";
+                    result.Action = ICEBOMActionEnum.Skip;
+                }
+                else if (!existsInOdoo && settings.CreateMissingProducts)
+                {
+                    result.Status = "ready";
+                    result.Action = ICEBOMActionEnum.Create;
+                }
+                else
+                {
+                    result.Status = "ready";
+                    result.Action = ICEBOMActionEnum.Skip;
+                }
             }
 
             return result;
         }
 
-        private static ICEBOMBomResult ValidateBom(ICEBOMBom bom)
+        private ICEBOMBomResult ValidateBom(ICEBOMBom bom, ICEBOMSettingsSnapshot settings)
         {
             var result = new ICEBOMBomResult
             {
@@ -100,8 +130,28 @@ namespace ICEBOM.Core.Domain.Services
             }
             else
             {
-                result.Status = "ready";
-                result.Action = ICEBOMActionEnum.Create;
+                var existsInOdoo = _odooRepository.BomExists(bom.ProductReference);
+
+                if (existsInOdoo && settings.UpdateExistingBoms)
+                {
+                    result.Status = "ready";
+                    result.Action = ICEBOMActionEnum.Update;
+                }
+                else if (existsInOdoo && !settings.UpdateExistingBoms)
+                {
+                    result.Status = "ready";
+                    result.Action = ICEBOMActionEnum.Skip;
+                }
+                else if (!existsInOdoo && settings.CreateMissingBoms)
+                {
+                    result.Status = "ready";
+                    result.Action = ICEBOMActionEnum.Create;
+                }
+                else
+                {
+                    result.Status = "ready";
+                    result.Action = ICEBOMActionEnum.Skip;
+                }
             }
 
             return result;
@@ -138,6 +188,126 @@ namespace ICEBOM.Core.Domain.Services
                 : response.Summary.WarningsCount > 0
                     ? "warning"
                     : "ready";
+        }
+
+        private void ValidateBusinessRules(ICEBOMRequest request, ICEBOMResponse response)
+        {
+            var bomProducts = request.Boms
+                .Select(b => b.ProductReference)
+                .Where(r => !string.IsNullOrWhiteSpace(r))
+                .ToHashSet();
+
+            foreach (var comp in response.Components)
+            {
+                var requestComp = request.Components
+                    .FirstOrDefault(c => c.Reference == comp.Reference);
+
+                if (requestComp == null)
+                    continue;
+
+                var functionalType = requestComp.Classification.FunctionalType;
+
+                var hasBom = bomProducts.Contains(comp.Reference);
+
+                // 🔴 Regla 1: Commercial no puede tener BOM
+                if (functionalType == "commercial" && hasBom)
+                {
+                    comp.Errors.Add(CreateError(
+                        "INVALID_COMMERCIAL_WITH_BOM",
+                        $"El componente '{comp.Reference}' es comercial pero tiene BOM."));
+                }
+
+                // 🔴 Regla 2: Manufactured debe tener BOM
+                if (functionalType == "manufactured" && !hasBom)
+                {
+                    comp.Errors.Add(CreateError(
+                        "MANUFACTURED_WITHOUT_BOM",
+                        $"El componente '{comp.Reference}' es fabricado pero no tiene BOM."));
+                }
+            }
+        }
+
+        private void ValidateBomLines(
+    ICEBOMRequest request,
+    ICEBOMResponse response)
+        {
+            var componentIds = request.Components
+                .Select(c => c.InternalId)
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .ToHashSet();
+
+            var componentReferences = request.Components
+                .Select(c => c.Reference)
+                .Where(r => !string.IsNullOrWhiteSpace(r))
+                .ToHashSet();
+
+            foreach (var bomResult in response.Boms)
+            {
+                var requestBom = request.Boms
+                    .FirstOrDefault(b => b.BomId == bomResult.BomId);
+
+                if (requestBom == null || requestBom.Lines == null)
+                    continue;
+
+                foreach (var line in requestBom.Lines)
+                {
+                    if (string.IsNullOrWhiteSpace(line.ComponentInternalId))
+                    {
+                        bomResult.Errors.Add(CreateError(
+                            "BOM_LINE_MISSING_COMPONENT_INTERNAL_ID",
+                            $"La BOM '{requestBom.BomId}' tiene una línea sin identificador interno de componente."));
+                    }
+
+                    if (string.IsNullOrWhiteSpace(line.ComponentReference))
+                    {
+                        bomResult.Errors.Add(CreateError(
+                            "BOM_LINE_MISSING_COMPONENT_REFERENCE",
+                            $"La BOM '{requestBom.BomId}' tiene una línea sin referencia de componente."));
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(line.ComponentInternalId) &&
+                        !componentIds.Contains(line.ComponentInternalId))
+                    {
+                        bomResult.Errors.Add(CreateError(
+                            "BOM_LINE_COMPONENT_ID_NOT_FOUND",
+                            $"La BOM '{requestBom.BomId}' contiene el componente '{line.ComponentInternalId}', pero no existe en el catálogo."));
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(line.ComponentReference) &&
+                        !componentReferences.Contains(line.ComponentReference))
+                    {
+                        bomResult.Errors.Add(CreateError(
+                            "BOM_LINE_COMPONENT_REFERENCE_NOT_FOUND",
+                            $"La BOM '{requestBom.BomId}' contiene la referencia '{line.ComponentReference}', pero no existe en el catálogo."));
+                    }
+
+                    if (line.Quantity <= 0)
+                    {
+                        bomResult.Errors.Add(CreateError(
+                            "BOM_LINE_INVALID_QUANTITY",
+                            $"La BOM '{requestBom.BomId}' contiene una línea con cantidad inválida: {line.Quantity}."));
+                    }
+
+                    if (string.IsNullOrWhiteSpace(line.Unit))
+                    {
+                        bomResult.Warnings.Add(new ICEBOMWarning
+                        {
+                            Code = "BOM_LINE_MISSING_UNIT",
+                            Message = $"La BOM '{requestBom.BomId}' contiene una línea sin unidad. Se usará la unidad por defecto."
+                        });
+                    }
+                }
+
+                if (bomResult.Errors.Count > 0)
+                {
+                    bomResult.Status = "blocked";
+                    bomResult.Action = ICEBOMActionEnum.Blocked;
+                }
+                else if (bomResult.Warnings.Count > 0 && bomResult.Status == "ready")
+                {
+                    bomResult.Status = "warning";
+                }
+            }
         }
     }
 }

@@ -3,6 +3,8 @@
     public class ICEBOMResponseMeta
     {
         public string Schema { get; set; } = "icebom.response.v1";
+
+        public string CoreVersion { get; set; } = string.Empty;
         public string RequestExportId { get; set; } = string.Empty;
         public DateTime ProcessDate { get; set; } = DateTime.Now;
     }
