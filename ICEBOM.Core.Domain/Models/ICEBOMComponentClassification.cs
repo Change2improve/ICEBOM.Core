@@ -13,5 +13,9 @@ namespace ICEBOM.Core.Domain.Models
         public bool IsSellable { get; set; }
         public bool IsSparePart { get; set; }
         public bool IsMaintenance { get; set; }
+
+        public string Category { get; set; } = string.Empty;
+
+        public string Unit { get; set; } = string.Empty;
     }
 }

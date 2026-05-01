@@ -7,7 +7,7 @@ namespace ICEBOM.Core.Domain.Services
 {
     public class ICEBOMValidator
     {
-        private readonly FakeOdooRepository _odooRepository;
+        private readonly IOdooRepository _odooRepository;
 
         private readonly ICEBOMUnitNormalizer _unitNormalizer;
 
@@ -15,7 +15,7 @@ namespace ICEBOM.Core.Domain.Services
 
         private readonly ICEBOMTraceService _traceService;
 
-        public ICEBOMValidator(FakeOdooRepository odooRepository, ICEBOMUnitNormalizer unitNormalizer, ICEBOMBusinessRulesConfig businessRules, ICEBOMTraceService traceService)
+        public ICEBOMValidator(IOdooRepository odooRepository, ICEBOMUnitNormalizer unitNormalizer, ICEBOMBusinessRulesConfig businessRules, ICEBOMTraceService traceService)
         {
             _odooRepository = odooRepository;
             _unitNormalizer = unitNormalizer;
@@ -229,6 +229,46 @@ namespace ICEBOM.Core.Domain.Services
                     }
 
                     line.Unit = normalizedUnit;
+
+                    var odooUnit = _odooRepository.GetUnit(normalizedUnit);
+                    lineResult.OdooUnitId = odooUnit.Id;
+
+                    if (string.IsNullOrWhiteSpace(normalizedUnit))
+                    {
+                        _traceService.Add(
+                            "ResolveUnit",
+                            "BOMLine",
+                            line.ComponentReference,
+                            $"La línea de la BOM '{requestBom.BomId}' no tiene unidad normalizada.");
+                    }
+                    else if (odooUnit.Exists)
+                    {
+                        _traceService.Add(
+                            "ResolveUnit",
+                            "BOMLine",
+                            line.ComponentReference,
+                            $"Unidad '{odooUnit.Name}' encontrada en Odoo simulado. Id={odooUnit.Id}.");
+                    }
+                    else
+                    {
+                        _traceService.Add(
+                            "ResolveUnit",
+                            "BOMLine",
+                            line.ComponentReference,
+                            $"Unidad '{odooUnit.Name}' no encontrada en Odoo simulado.");
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(normalizedUnit) && !odooUnit.Exists)
+                    {
+                        var warning = new ICEBOMWarning
+                        {
+                            Code = "BOM_LINE_ODOO_UNIT_NOT_FOUND",
+                            Message = $"La unidad '{normalizedUnit}' no existe en Odoo simulado."
+                        };
+
+                        bomResult.Warnings.Add(warning);
+                        lineResult.Warnings.Add(warning);
+                    }
 
                     if (string.IsNullOrWhiteSpace(line.ComponentInternalId))
                     {

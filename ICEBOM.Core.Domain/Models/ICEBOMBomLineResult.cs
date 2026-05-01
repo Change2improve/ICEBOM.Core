@@ -11,5 +11,7 @@
 
         public List<ICEBOMError> Errors { get; set; } = new();
         public List<ICEBOMWarning> Warnings { get; set; } = new();
+
+        public int OdooUnitId { get; set; }
     }
 }

@@ -11,5 +11,7 @@
         public string Status { get; set; } = string.Empty;
         public string ErrorsText { get; set; } = string.Empty;
         public string WarningsText { get; set; } = string.Empty;
+
+        public int OdooUnitId { get; set; }
     }
 }

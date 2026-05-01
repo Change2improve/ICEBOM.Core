@@ -16,5 +16,7 @@ namespace ICEBOM.Core.App.ViewModels
         public string Action { get; set; } = string.Empty;
         public string ErrorsText { get; set; } = string.Empty;
         public string WarningsText { get; set; } = string.Empty;
+
+        public int OdooBomId { get; set; }
     }
 }

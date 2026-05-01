@@ -13,6 +13,11 @@ namespace ICEBOM.Core.App.Services
                 Reference = c.Reference,
                 Status = c.Status,
                 Action = c.Action.ToString(),
+                OdooProductId = c.OdooProductId,
+                OdooProductName = c.OdooProductName,
+                OdooUnitId = c.OdooUnitId,
+                OdooCategoryId = c.OdooCategoryId,
+                Category = c.Category,
                 ErrorsText = string.Join(" | ", c.Errors.Select(e => e.Message)),
                 WarningsText = string.Join(" | ", c.Warnings.Select(w => w.Message))
             }).ToList();
@@ -26,6 +31,7 @@ namespace ICEBOM.Core.App.Services
                 ProductReference = b.ProductReference,
                 Status = b.Status,
                 Action = b.Action.ToString(),
+                OdooBomId = b.OdooBomId,
                 ErrorsText = string.Join(" | ", b.Errors.Select(e => e.Message)),
                 WarningsText = string.Join(" | ", b.Warnings.Select(w => w.Message))
             }).ToList();
@@ -40,6 +46,7 @@ namespace ICEBOM.Core.App.Services
                     ComponentInternalId = line.ComponentInternalId,
                     ComponentReference = line.ComponentReference,
                     Quantity = line.Quantity,
+                    OdooUnitId = line.OdooUnitId,
                     OriginalUnit = line.OriginalUnit,
                     NormalizedUnit = line.NormalizedUnit,
                     Status = line.Status,

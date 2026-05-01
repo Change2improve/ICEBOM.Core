@@ -15,5 +15,9 @@ namespace ICEBOM.Core.Domain.Models
 
         public List<ICEBOMError> Errors { get; set; } = new();
         public List<ICEBOMWarning> Warnings { get; set; } = new();
+
+        public int OdooBomId { get; set; }
+
+        public int OdooProductId { get; set; }
     }
 }

@@ -77,6 +77,11 @@
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Internal ID" Binding="{Binding InternalId}" Width="120"/>
                         <DataGridTextColumn Header="Referencia" Binding="{Binding Reference}" Width="120"/>
+                        <DataGridTextColumn Header="Odoo ID" Binding="{Binding OdooProductId}" Width="100"/>
+                        <DataGridTextColumn Header="Odoo Nombre" Binding="{Binding OdooProductName}" Width="160"/>
+                        <DataGridTextColumn Header="Category ID" Binding="{Binding OdooCategoryId}" Width="110"/>
+                        <DataGridTextColumn Header="Categoría" Binding="{Binding Category}" Width="140"/>
+                        <DataGridTextColumn Header="Unit ID" Binding="{Binding OdooUnitId}" Width="90"/>
                         <DataGridTextColumn Header="Estado" Binding="{Binding Status}" Width="100"/>
                         <DataGridTextColumn Header="Acción" Binding="{Binding Action}" Width="150"/>
                         <DataGridTextColumn Header="Errores" Binding="{Binding ErrorsText}" Width="*"/>
@@ -107,6 +112,7 @@
                     </DataGrid.RowStyle>
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="BOM ID" Binding="{Binding BomId}" Width="120"/>
+                        <DataGridTextColumn Header="Odoo BOM ID" Binding="{Binding OdooBomId}" Width="120"/>
                         <DataGridTextColumn Header="Producto" Binding="{Binding ProductReference}" Width="140"/>
                         <DataGridTextColumn Header="Estado" Binding="{Binding Status}" Width="100"/>
                         <DataGridTextColumn Header="Acción" Binding="{Binding Action}" Width="150"/>
@@ -142,6 +148,7 @@
                         <DataGridTextColumn Header="Internal ID" Binding="{Binding ComponentInternalId}" Width="120"/>
                         <DataGridTextColumn Header="Referencia" Binding="{Binding ComponentReference}" Width="120"/>
                         <DataGridTextColumn Header="Cantidad" Binding="{Binding Quantity}" Width="90"/>
+                        <DataGridTextColumn Header="Odoo Unit ID" Binding="{Binding OdooUnitId}" Width="110"/>
                         <DataGridTextColumn Header="Unidad original" Binding="{Binding OriginalUnit}" Width="120"/>
                         <DataGridTextColumn Header="Unidad normalizada" Binding="{Binding NormalizedUnit}" Width="140"/>
                         <DataGridTextColumn Header="Estado" Binding="{Binding Status}" Width="100"/>

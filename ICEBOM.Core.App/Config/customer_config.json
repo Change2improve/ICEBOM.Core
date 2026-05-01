@@ -53,6 +53,8 @@
   },
   "fakeOdoo": {
     "existingProducts": [ "P-001", "C-001" ],
-    "existingBoms": [ "P-001" ]
+    "existingBoms": [ "P-001" ],
+    "existingCategories": [ "Fabricación", "Comercial" ],
+    "existingUnits": [ "Ud", "m", "mm", "kg" ]
   }
 }

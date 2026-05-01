@@ -9,7 +9,7 @@ namespace ICEBOM.Core.Domain.Services
 {
     public class ICEBOMProcessor
     {
-        private readonly FakeOdooRepository _odooRepository;
+        private readonly IOdooRepository _odooRepository;
 
         private readonly ICEBOMValidator _validator;
 
@@ -17,13 +17,13 @@ namespace ICEBOM.Core.Domain.Services
 
         private readonly ICEBOMTraceService _traceService;
 
-        public ICEBOMProcessor(FakeOdooRepository odooRepository, ICEBOMUnitNormalizer unitNormalizer, ICEBOMBusinessRulesConfig businessRules)
+        public ICEBOMProcessor(IOdooRepository odooRepository, ICEBOMUnitNormalizer unitNormalizer, ICEBOMBusinessRulesConfig businessRules)
         {
             _odooRepository = odooRepository;
             _traceService = new ICEBOMTraceService();
 
             _validator = new ICEBOMValidator(_odooRepository, unitNormalizer, businessRules, _traceService);
-            _decisionEngine = new ICEBOMDecisionEngine(_odooRepository, _traceService);
+            _decisionEngine = new ICEBOMDecisionEngine(_odooRepository, _traceService, unitNormalizer);
         }
 
         public ICEBOMResponse Process(ICEBOMRequest request)

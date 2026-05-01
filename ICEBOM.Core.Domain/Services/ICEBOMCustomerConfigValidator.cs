@@ -33,7 +33,13 @@ namespace ICEBOM.Core.Domain.Services
                 errors.Add("La versión de configuración no puede estar vacía.");
 
             if (config.SyncPolicy == null)
+            {
                 errors.Add("Falta la sección syncPolicy.");
+            }
+            else if (config.SyncPolicy.AllowProductVariants)
+            {
+                errors.Add("ICEBOM V1 no soporta variantes de producto. El valor syncPolicy.allowProductVariants debe ser false.");
+            }
 
             if (config.Defaults == null)
                 errors.Add("Falta la sección defaults.");
