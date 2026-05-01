@@ -1,0 +1,58 @@
+{
+  "customerName": "Demo Customer",
+  "configVersion": "1.0.0",
+  "execution": {
+    "mode": "Debug",
+    "includeTrace": true
+  },
+  "syncPolicy": {
+    "createMissingProducts": true,
+    "updateExistingProducts": true,
+    "createMissingBoms": true,
+    "updateExistingBoms": true,
+    "allowProductVariants": false
+  },
+  "defaults": {
+    "defaultUnit": "Ud",
+    "defaultFunctionalType": "Unknown"
+  },
+  "businessRules": {
+    "commercialCannotHaveBom": true,
+    "manufacturedMustHaveBom": true,
+    "ignoreChildrenWithBomIsWarning": true,
+    "exportErpFalseWithBomIsError": true,
+    "exportErpFalseUsedInBomIsError": true
+  },
+  "functionalTypes": {
+    "aliases": {
+      "manufactured": "Manufactured",
+      "fabricado": "Manufactured",
+      "fabricada": "Manufactured",
+      "commercial": "Commercial",
+      "comercial": "Commercial"
+    }
+  },
+  "units": {
+    "knownUnits": [ "Ud", "m", "mm", "kg" ],
+    "aliases": {
+      "ud": "Ud",
+      "uds": "Ud",
+      "unidad": "Ud",
+      "unidades": "Ud",
+      "unit": "Ud",
+      "units": "Ud",
+      "metro": "m",
+      "metros": "m",
+      "milimetro": "mm",
+      "milímetro": "mm",
+      "milimetros": "mm",
+      "milímetros": "mm",
+      "kilogramo": "kg",
+      "kilogramos": "kg"
+    }
+  },
+  "fakeOdoo": {
+    "existingProducts": [ "P-001", "C-001" ],
+    "existingBoms": [ "P-001" ]
+  }
+}

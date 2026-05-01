@@ -112,5 +112,76 @@ namespace ICEBOM.Core.App.Services
 
             return messages;
         }
+
+        public List<ConfigItemView> BuildConfigItems(ICEBOMCustomerConfig config)
+        {
+            var items = new List<ConfigItemView>
+            {
+                new() { Section = "General", Key = "CustomerName", Value = config.CustomerName },
+                new() { Section = "General", Key = "ConfigVersion", Value = config.ConfigVersion },
+
+                new() { Section = "SyncPolicy", Key = "CreateMissingProducts", Value = config.SyncPolicy.CreateMissingProducts.ToString() },
+                new() { Section = "SyncPolicy", Key = "UpdateExistingProducts", Value = config.SyncPolicy.UpdateExistingProducts.ToString() },
+                new() { Section = "SyncPolicy", Key = "CreateMissingBoms", Value = config.SyncPolicy.CreateMissingBoms.ToString() },
+                new() { Section = "SyncPolicy", Key = "UpdateExistingBoms", Value = config.SyncPolicy.UpdateExistingBoms.ToString() },
+                new() { Section = "SyncPolicy", Key = "AllowProductVariants", Value = config.SyncPolicy.AllowProductVariants.ToString() },
+
+                new() { Section = "Defaults", Key = "DefaultUnit", Value = config.Defaults.DefaultUnit },
+                new() { Section = "Defaults", Key = "DefaultFunctionalType", Value = config.Defaults.DefaultFunctionalType },
+            };
+
+            foreach (var unit in config.Units.KnownUnits)
+            {
+                items.Add(new ConfigItemView
+                {
+                    Section = "Units.KnownUnits",
+                    Key = "Unit",
+                    Value = unit
+                });
+            }
+
+            foreach (var alias in config.Units.Aliases)
+            {
+                items.Add(new ConfigItemView
+                {
+                    Section = "Units.Aliases",
+                    Key = alias.Key,
+                    Value = alias.Value
+                });
+            }
+
+            foreach (var product in config.FakeOdoo.ExistingProducts)
+            {
+                items.Add(new ConfigItemView
+                {
+                    Section = "FakeOdoo.Products",
+                    Key = "ExistingProduct",
+                    Value = product
+                });
+            }
+
+            foreach (var bom in config.FakeOdoo.ExistingBoms)
+            {
+                items.Add(new ConfigItemView
+                {
+                    Section = "FakeOdoo.BOMs",
+                    Key = "ExistingBom",
+                    Value = bom
+                });
+            }
+
+            return items;
+        }
+
+        public List<TraceEntryView> BuildTrace(ICEBOMResponse response)
+        {
+            return response.Trace.Select(t => new TraceEntryView
+            {
+                Step = t.Step,
+                Entity = t.Entity,
+                Reference = t.Reference,
+                Message = t.Message
+            }).ToList();
+        }
     }
 }

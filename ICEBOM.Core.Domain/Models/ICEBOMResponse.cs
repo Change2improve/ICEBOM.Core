@@ -11,6 +11,8 @@ namespace ICEBOM.Core.Domain.Models
 
         public ICEBOMResponseSummary Summary { get; set; } = new();
 
+        public List<ICEBOMTraceEntry> Trace { get; set; } = new();
+
         public List<ICEBOMComponentResult> Components { get; set; } = new();
         public List<ICEBOMBomResult> Boms { get; set; } = new();
     }

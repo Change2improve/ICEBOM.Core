@@ -2,6 +2,7 @@
 
 using ICEBOM.Core.Domain.Enums;
 using ICEBOM.Core.Domain.Models;
+using ICEBOM.Core.Domain.Normalizers;
 using ICEBOM.Core.Domain.Repositories;
 
 namespace ICEBOM.Core.Domain.Services
@@ -14,11 +15,15 @@ namespace ICEBOM.Core.Domain.Services
 
         private readonly ICEBOMDecisionEngine _decisionEngine;
 
-        public ICEBOMProcessor()
+        private readonly ICEBOMTraceService _traceService;
+
+        public ICEBOMProcessor(FakeOdooRepository odooRepository, ICEBOMUnitNormalizer unitNormalizer, ICEBOMBusinessRulesConfig businessRules)
         {
-            _odooRepository = new FakeOdooRepository();
-            _validator = new ICEBOMValidator(_odooRepository);
-            _decisionEngine = new ICEBOMDecisionEngine(_odooRepository);
+            _odooRepository = odooRepository;
+            _traceService = new ICEBOMTraceService();
+
+            _validator = new ICEBOMValidator(_odooRepository, unitNormalizer, businessRules, _traceService);
+            _decisionEngine = new ICEBOMDecisionEngine(_odooRepository, _traceService);
         }
 
         public ICEBOMResponse Process(ICEBOMRequest request)
@@ -27,6 +32,8 @@ namespace ICEBOM.Core.Domain.Services
                 throw new ArgumentNullException(nameof(request));
 
             var response = CreateBaseResponse(request);
+
+            _traceService.Add("Start", "System", "", "Inicio del procesamiento");
 
             foreach (var component in request.Components)
                 response.Components.Add(_validator.ValidateComponent(component, request.SettingsSnapshot));
@@ -51,6 +58,8 @@ namespace ICEBOM.Core.Domain.Services
             }
 
             CalculateSummary(response);
+
+            response.Trace.AddRange(_traceService.Entries);
 
             return response;
         }

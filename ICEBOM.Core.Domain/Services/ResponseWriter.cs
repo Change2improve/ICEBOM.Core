@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Text.Json.Serialization;
 using System.Text.Json;
 
 using ICEBOM.Core.Domain.Models;
@@ -15,7 +16,11 @@ namespace ICEBOM.Core.App.Services
 
             var responseJson = JsonSerializer.Serialize(response, new JsonSerializerOptions
             {
-                WriteIndented = true
+                WriteIndented = true,
+                Converters =
+                {
+                    new JsonStringEnumConverter()
+                }
             });
 
             File.WriteAllText(responsePath, responseJson);

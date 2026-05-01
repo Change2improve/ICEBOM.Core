@@ -5,6 +5,9 @@ namespace ICEBOM.Core.Domain.Models
     public class ICEBOMComponentClassification
     {
         public ICEBOMFunctionalTypeEnum FunctionalType { get; set; } = ICEBOMFunctionalTypeEnum.Unknown;
+
+        public string FunctionalTypeRaw { get; set; } = string.Empty;
+
         public bool IsCommercial { get; set; }
         public bool IsStorable { get; set; } = true;
         public bool IsSellable { get; set; }

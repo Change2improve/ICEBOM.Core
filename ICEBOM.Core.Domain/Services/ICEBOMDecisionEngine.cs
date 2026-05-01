@@ -8,9 +8,12 @@ namespace ICEBOM.Core.Domain.Services
     {
         private readonly FakeOdooRepository _odooRepository;
 
-        public ICEBOMDecisionEngine(FakeOdooRepository odooRepository)
+        private readonly ICEBOMTraceService _traceService;
+
+        public ICEBOMDecisionEngine(FakeOdooRepository odooRepository, ICEBOMTraceService traceService)
         {
             _odooRepository = odooRepository;
+            _traceService = traceService;
         }
 
         public void DecideComponent(ICEBOMComponent component, ICEBOMComponentResult result, ICEBOMSettingsSnapshot settings)
@@ -19,6 +22,13 @@ namespace ICEBOM.Core.Domain.Services
             {
                 result.Status = "blocked";
                 result.Action = ICEBOMActionEnum.Blocked;
+
+                _traceService.Add(
+                    "DecisionComponent",
+                    "Component",
+                    component.Reference,
+                    "El componente tiene errores de validación → Blocked.");
+
                 return;
             }
 
@@ -26,6 +36,13 @@ namespace ICEBOM.Core.Domain.Services
             {
                 result.Status = "ready";
                 result.Action = ICEBOMActionEnum.Skip;
+
+                _traceService.Add(
+                    "DecisionComponent",
+                    "Component",
+                    component.Reference,
+                    "ExportErp=false → Skip.");
+
                 return;
             }
 
@@ -34,18 +51,42 @@ namespace ICEBOM.Core.Domain.Services
             if (exists && settings.UpdateExistingProducts)
             {
                 result.Action = ICEBOMActionEnum.Update;
+
+                _traceService.Add(
+                    "DecisionComponent",
+                    "Component",
+                    component.Reference,
+                    "Producto existe en Odoo y la configuración permite actualizar → Update.");
             }
             else if (exists && !settings.UpdateExistingProducts)
             {
                 result.Action = ICEBOMActionEnum.Skip;
+
+                _traceService.Add(
+                    "DecisionComponent",
+                    "Component",
+                    component.Reference,
+                    "Producto existe en Odoo pero la configuración no permite actualizar → Skip.");
             }
             else if (!exists && settings.CreateMissingProducts)
             {
                 result.Action = ICEBOMActionEnum.Create;
+
+                _traceService.Add(
+                    "DecisionComponent",
+                    "Component",
+                    component.Reference,
+                    "Producto no existe en Odoo y la configuración permite crearlo → Create.");
             }
             else
             {
                 result.Action = ICEBOMActionEnum.Skip;
+
+                _traceService.Add(
+                    "DecisionComponent",
+                    "Component",
+                    component.Reference,
+                    "Producto no existe en Odoo y la configuración no permite crearlo → Skip.");
             }
 
             result.Status = "ready";
@@ -57,15 +98,30 @@ namespace ICEBOM.Core.Domain.Services
             {
                 result.Status = "blocked";
                 result.Action = ICEBOMActionEnum.Blocked;
+
+                _traceService.Add(
+                    "DecisionBom",
+                    "BOM",
+                    bom.BomId,
+                    "La BOM tiene errores de validación → Blocked.");
+
                 return;
             }
 
-            var parentComponent = request.Components.FirstOrDefault(c => c.InternalId == bom.SourceComponentId);
+            var parentComponent = request.Components
+                .FirstOrDefault(c => c.InternalId == bom.SourceComponentId);
 
             if (parentComponent?.Control.IgnoreChildren == true)
             {
                 result.Status = "ready";
                 result.Action = ICEBOMActionEnum.Skip;
+
+                _traceService.Add(
+                    "DecisionBom",
+                    "BOM",
+                    bom.BomId,
+                    "El componente padre tiene IgnoreChildren=true → Skip.");
+
                 return;
             }
 
@@ -74,18 +130,42 @@ namespace ICEBOM.Core.Domain.Services
             if (exists && settings.UpdateExistingBoms)
             {
                 result.Action = ICEBOMActionEnum.Update;
+
+                _traceService.Add(
+                    "DecisionBom",
+                    "BOM",
+                    bom.BomId,
+                    "La BOM existe en Odoo y la configuración permite actualizar → Update.");
             }
             else if (exists && !settings.UpdateExistingBoms)
             {
                 result.Action = ICEBOMActionEnum.Skip;
+
+                _traceService.Add(
+                    "DecisionBom",
+                    "BOM",
+                    bom.BomId,
+                    "La BOM existe en Odoo pero la configuración no permite actualizar → Skip.");
             }
             else if (!exists && settings.CreateMissingBoms)
             {
                 result.Action = ICEBOMActionEnum.Create;
+
+                _traceService.Add(
+                    "DecisionBom",
+                    "BOM",
+                    bom.BomId,
+                    "La BOM no existe en Odoo y la configuración permite crearla → Create.");
             }
             else
             {
                 result.Action = ICEBOMActionEnum.Skip;
+
+                _traceService.Add(
+                    "DecisionBom",
+                    "BOM",
+                    bom.BomId,
+                    "La BOM no existe en Odoo y la configuración no permite crearla → Skip.");
             }
 
             result.Status = "ready";

@@ -25,11 +25,23 @@
                         Width="160"
                         Height="36"
                         Click="ProcessJson_Click"/>
+
+                <Button Content="Seleccionar configuración"
+                    Width="190"
+                    Height="36"
+                    Margin="8,0,0,0"
+                    Click="SelectConfig_Click"/>
             </StackPanel>
 
             <TextBlock Text="Archivo seleccionado:" FontWeight="Bold"/>
             <TextBlock x:Name="SelectedFileText"
                        Text="Ningún archivo seleccionado"
+                       Margin="0,4,0,16"
+                       TextWrapping="Wrap"/>
+
+            <TextBlock Text="Configuración seleccionada:" FontWeight="Bold"/>
+            <TextBlock x:Name="SelectedConfigText"
+                       Text="Config/customer_config.json"
                        Margin="0,4,0,16"
                        TextWrapping="Wrap"/>
         </StackPanel>
@@ -139,6 +151,19 @@
                 </DataGrid>
             </TabItem>
 
+            <TabItem Header="Configuración">
+                <DataGrid x:Name="ConfigGrid"
+              Margin="12"
+              AutoGenerateColumns="False"
+              IsReadOnly="True">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Sección" Binding="{Binding Section}" Width="180"/>
+                        <DataGridTextColumn Header="Clave" Binding="{Binding Key}" Width="220"/>
+                        <DataGridTextColumn Header="Valor" Binding="{Binding Value}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </TabItem>
+
             <TabItem Header="Mensajes">
                 <DataGrid x:Name="MessagesGrid"
               Margin="12"
@@ -149,6 +174,20 @@
                         <DataGridTextColumn Header="Código" Binding="{Binding Code}" Width="180"/>
                         <DataGridTextColumn Header="Mensaje" Binding="{Binding Message}" Width="*"/>
                         <DataGridTextColumn Header="Origen" Binding="{Binding Source}" Width="180"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </TabItem>
+
+            <TabItem Header="Trace">
+                <DataGrid x:Name="TraceGrid"
+              Margin="12"
+              AutoGenerateColumns="False"
+              IsReadOnly="True">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Step" Binding="{Binding Step}" Width="160"/>
+                        <DataGridTextColumn Header="Entity" Binding="{Binding Entity}" Width="120"/>
+                        <DataGridTextColumn Header="Reference" Binding="{Binding Reference}" Width="140"/>
+                        <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="*"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </TabItem>

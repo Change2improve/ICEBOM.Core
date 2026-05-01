@@ -1,19 +1,17 @@
-﻿using System.Collections.Generic;
+﻿using ICEBOM.Core.Domain.Models;
 
 namespace ICEBOM.Core.Domain.Repositories
 {
     public class FakeOdooRepository
     {
-        private readonly HashSet<string> _existingProducts = new()
-        {
-            "P-001",
-            "C-001"
-        };
+        private readonly HashSet<string> _existingProducts;
+        private readonly HashSet<string> _existingBoms;
 
-        private readonly HashSet<string> _existingBoms = new()
+        public FakeOdooRepository(ICEBOMFakeOdooConfig config)
         {
-            "P-001"
-        };
+            _existingProducts = config.ExistingProducts.ToHashSet();
+            _existingBoms = config.ExistingBoms.ToHashSet();
+        }
 
         public bool ProductExists(string reference)
         {

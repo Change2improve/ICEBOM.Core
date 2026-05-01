@@ -9,13 +9,28 @@ namespace ICEBOM.Core.Domain.Services
     {
         private readonly FakeOdooRepository _odooRepository;
 
-        public ICEBOMValidator(FakeOdooRepository odooRepository)
+        private readonly ICEBOMUnitNormalizer _unitNormalizer;
+
+        private readonly ICEBOMBusinessRulesConfig _businessRules;
+
+        private readonly ICEBOMTraceService _traceService;
+
+        public ICEBOMValidator(FakeOdooRepository odooRepository, ICEBOMUnitNormalizer unitNormalizer, ICEBOMBusinessRulesConfig businessRules, ICEBOMTraceService traceService)
         {
             _odooRepository = odooRepository;
+            _unitNormalizer = unitNormalizer;
+            _businessRules = businessRules;
+            _traceService = traceService;
         }
 
         public ICEBOMComponentResult ValidateComponent(ICEBOMComponent component, ICEBOMSettingsSnapshot settings)
         {
+            _traceService.Add(
+                "ValidateComponent",
+                "Component",
+                component.Reference,
+                $"Validando componente '{component.InternalId}'.");
+
             var result = new ICEBOMComponentResult
             {
                 InternalId = component.InternalId,
@@ -43,6 +58,12 @@ namespace ICEBOM.Core.Domain.Services
 
         public ICEBOMBomResult ValidateBom(ICEBOMBom bom, ICEBOMSettingsSnapshot settings)
         {
+            _traceService.Add(
+                "ValidateBom",
+                "BOM",
+                bom.BomId,
+                $"Validando BOM '{bom.BomId}'.");
+
             var result = new ICEBOMBomResult
             {
                 BomId = bom.BomId,
@@ -101,21 +122,27 @@ namespace ICEBOM.Core.Domain.Services
                 var functionalType = requestComp.Classification.FunctionalType;
                 var hasBom = bomProducts.Contains(comp.Reference);
 
-                if (functionalType == ICEBOMFunctionalTypeEnum.Commercial && hasBom)
+                if (_businessRules.CommercialCannotHaveBom &&
+                    functionalType == ICEBOMFunctionalTypeEnum.Commercial &&
+                    hasBom)
                 {
                     comp.Errors.Add(CreateError(
                         "INVALID_COMMERCIAL_WITH_BOM",
                         $"El componente '{comp.Reference}' es comercial pero tiene BOM."));
                 }
 
-                if (functionalType == ICEBOMFunctionalTypeEnum.Manufactured && !hasBom)
+                if (_businessRules.ManufacturedMustHaveBom &&
+                    functionalType == ICEBOMFunctionalTypeEnum.Manufactured &&
+                    !hasBom)
                 {
                     comp.Errors.Add(CreateError(
                         "MANUFACTURED_WITHOUT_BOM",
                         $"El componente '{comp.Reference}' es fabricado pero no tiene BOM."));
                 }
 
-                if (requestComp.Control.IgnoreChildren && hasBom)
+                if (_businessRules.IgnoreChildrenWithBomIsWarning &&
+                    requestComp.Control.IgnoreChildren &&
+                    hasBom)
                 {
                     comp.Warnings.Add(new ICEBOMWarning
                     {
@@ -124,14 +151,18 @@ namespace ICEBOM.Core.Domain.Services
                     });
                 }
 
-                if (!requestComp.Control.ExportErp && hasBom)
+                if (_businessRules.ExportErpFalseWithBomIsError &&
+                    !requestComp.Control.ExportErp &&
+                    hasBom)
                 {
                     comp.Errors.Add(CreateError(
                         "NON_EXPORTABLE_COMPONENT_WITH_BOM",
                         $"El componente '{comp.Reference}' tiene ExportarERP=false, pero se ha recibido una BOM para él."));
                 }
 
-                if (!requestComp.Control.ExportErp && bomLineReferences.Contains(comp.Reference))
+                if (_businessRules.ExportErpFalseUsedInBomIsError &&
+                    !requestComp.Control.ExportErp &&
+                    bomLineReferences.Contains(comp.Reference))
                 {
                     comp.Errors.Add(CreateError(
                         "NON_EXPORTABLE_COMPONENT_USED_IN_BOM",
@@ -163,7 +194,7 @@ namespace ICEBOM.Core.Domain.Services
                 foreach (var line in requestBom.Lines)
                 {
                     var originalUnit = line.Unit;
-                    var normalizedUnit = ICEBOMUnitNormalizer.Normalize(line.Unit);
+                    var normalizedUnit = _unitNormalizer.Normalize(line.Unit);
 
                     var lineResult = new ICEBOMBomLineResult
                     {
@@ -185,7 +216,7 @@ namespace ICEBOM.Core.Domain.Services
                         bomResult.Warnings.Add(warning);
                         lineResult.Warnings.Add(warning);
                     }
-                    else if (!ICEBOMUnitNormalizer.IsKnown(line.Unit))
+                    else if (!_unitNormalizer.IsKnown(line.Unit))
                     {
                         var warning = new ICEBOMWarning
                         {
