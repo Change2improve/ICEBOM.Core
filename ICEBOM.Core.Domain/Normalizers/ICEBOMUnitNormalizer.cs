@@ -14,7 +14,7 @@ namespace ICEBOM.Core.Domain.Normalizers
         public string Normalize(string? unit)
         {
             if (string.IsNullOrWhiteSpace(unit))
-                return _config.KnownUnits.FirstOrDefault() ?? "Ud";
+                return _config.KnownUnits.FirstOrDefault() ?? "Units";
 
             var value = unit.Trim().ToLowerInvariant();
 
