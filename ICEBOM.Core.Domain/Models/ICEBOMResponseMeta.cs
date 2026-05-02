@@ -18,5 +18,7 @@
         public bool AllowProductVariants { get; set; }
 
         public DateTime ProcessDate { get; set; } = DateTime.Now;
+
+        public string ExecutionId { get; set; } = string.Empty;
     }
 }

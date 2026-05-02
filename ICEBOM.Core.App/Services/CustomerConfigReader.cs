@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 using ICEBOM.Core.Domain.Models;
 using ICEBOM.Core.Domain.Services;
@@ -19,6 +20,8 @@ namespace ICEBOM.Core.App.Services
             {
                 PropertyNameCaseInsensitive = true
             };
+
+            options.Converters.Add(new JsonStringEnumConverter());
 
             var config = JsonSerializer.Deserialize<ICEBOMCustomerConfig>(json, options);
 

@@ -5,6 +5,16 @@
     "mode": "Debug",
     "includeTrace": true
   },
+  "odooMode": {
+    "mode": "Fake",
+    "dryRun": true
+  },
+  "odooConnection": {
+    "url": "https://www.c2ih.com",
+    "database": "demoC2i",
+    "username": "heroes.industries@c2i.es",
+    "password": "C2iMA131026"
+  },
   "syncPolicy": {
     "createMissingProducts": true,
     "updateExistingProducts": true,
@@ -56,5 +66,11 @@
     "existingBoms": [ "P-001" ],
     "existingCategories": [ "Fabricación", "Comercial" ],
     "existingUnits": [ "Ud", "m", "mm", "kg" ]
+  },
+  "unsupportedFeatures": {
+    "blockProductVariants": true,
+    "warnSupplierData": true,
+    "warnRoutes": true,
+    "warnManufacturingOperations": true
   }
 }

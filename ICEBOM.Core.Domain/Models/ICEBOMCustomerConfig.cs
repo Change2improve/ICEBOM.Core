@@ -1,8 +1,15 @@
-﻿namespace ICEBOM.Core.Domain.Models
+﻿using ICEBOM.Core.Domain.Models.Odoo;
+
+namespace ICEBOM.Core.Domain.Models
 {
     public class ICEBOMCustomerConfig
     {
         public ICEBOMFakeOdooConfig FakeOdoo { get; set; } = new();
+
+        public ICEBOMOdooModeConfig OdooMode { get; set; } = new();
+
+        public OdooConnectionConfig OdooConnection { get; set; } = new();
+
         public string CustomerName { get; set; } = string.Empty;
         public string ConfigVersion { get; set; } = "1.0.0";
 
@@ -15,5 +22,7 @@
         public ICEBOMFunctionalTypeConfig FunctionalTypes { get; set; } = new();
 
         public ICEBOMExecutionConfig Execution { get; set; } = new();
+
+        public ICEBOMUnsupportedFeaturesConfig UnsupportedFeatures { get; set; } = new();
     }
 }

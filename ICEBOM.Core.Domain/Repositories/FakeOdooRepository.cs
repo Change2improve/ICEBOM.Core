@@ -3,7 +3,7 @@ using ICEBOM.Core.Domain.Models.Odoo;
 
 namespace ICEBOM.Core.Domain.Repositories
 {
-    public class FakeOdooRepository : IOdooRepository
+    public class FakeOdooRepository : IOdooRepository, IOdooRepositoryAsync
     {
         private readonly HashSet<string> _existingProducts;
         private readonly HashSet<string> _existingBoms;
@@ -168,5 +168,37 @@ namespace ICEBOM.Core.Domain.Repositories
                 Name = normalized
             };
         }
+
+        public Task<OdooProductInfo> GetProductAsync(string reference, CancellationToken cancellationToken = default) => Task.FromResult(GetProduct(reference));
+
+        public Task<OdooBomInfo> GetBomAsync(string productReference, CancellationToken cancellationToken = default) => Task.FromResult(GetBom(productReference));
+
+        public Task<OdooUnitInfo> GetUnitAsync(string unitName, CancellationToken cancellationToken = default) => Task.FromResult(GetUnit(unitName));
+
+        public Task<OdooCategoryInfo> GetCategoryAsync(string categoryName, CancellationToken cancellationToken = default) => Task.FromResult(GetCategory(categoryName));
+
+        public Task<OdooProductInfo> CreateProductAsync(string reference, CancellationToken cancellationToken = default) => Task.FromResult(CreateProduct(reference));
+
+        public Task<OdooProductInfo> UpdateProductAsync(string reference, CancellationToken cancellationToken = default) => Task.FromResult(UpdateProduct(reference));
+
+        public Task<OdooBomInfo> CreateBomAsync(string productReference, CancellationToken cancellationToken = default) => Task.FromResult(CreateBom(productReference));
+
+        public Task<OdooBomInfo> UpdateBomAsync(string productReference, CancellationToken cancellationToken = default) => Task.FromResult(UpdateBom(productReference));
+
+        public Task<OdooProductInfo> CreateProductAsync(OdooProductWriteRequest request, CancellationToken cancellationToken = default) => Task.FromResult(CreateProduct(request.Reference));
+
+        public Task<OdooProductInfo> UpdateProductAsync(OdooProductWriteRequest request, CancellationToken cancellationToken = default) => Task.FromResult(UpdateProduct(request.Reference));
+
+        public Task<OdooBomInfo> CreateBomAsync(OdooBomWriteRequest request, CancellationToken cancellationToken = default) => Task.FromResult(CreateBom(request.ProductReference));
+
+        public Task<OdooBomInfo> UpdateBomAsync(OdooBomWriteRequest request, CancellationToken cancellationToken = default) => Task.FromResult(UpdateBom(request.ProductReference));
+
+        public Task<int> DeleteBomLinesAsync(int bomId, CancellationToken cancellationToken = default) => Task.FromResult(0);
+
+        public Task<int> CreateBomLineAsync(OdooBomLineWriteRequest request, CancellationToken cancellationToken = default) => Task.FromResult(0);
+
+        public Task<int> ReplaceBomLinesAsync(int bomId, IReadOnlyCollection<OdooBomLineWriteRequest> lines, CancellationToken cancellationToken = default) => Task.FromResult(lines?.Count ?? 0);
+
+        public Task<int> SyncBomLinesAsync(string productReference, IReadOnlyCollection<OdooBomLineWriteRequest> lines, CancellationToken cancellationToken = default) => Task.FromResult(lines?.Count ?? 0);
     }
 }

@@ -15,6 +15,7 @@ namespace ICEBOM.Core.App.Services
             var lines = new List<string>
             {
                 $"ICEBOM Trace Log",
+                $"ExecutionId: {response.Meta.ExecutionId}",
                 $"RequestExportId: {response.Meta.RequestExportId}",
                 $"CoreVersion: {response.Meta.CoreVersion}",
                 $"CustomerName: {response.Meta.CustomerName}",

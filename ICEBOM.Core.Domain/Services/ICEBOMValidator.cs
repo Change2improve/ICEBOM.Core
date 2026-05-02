@@ -15,11 +15,20 @@ namespace ICEBOM.Core.Domain.Services
 
         private readonly ICEBOMTraceService _traceService;
 
-        public ICEBOMValidator(IOdooRepository odooRepository, ICEBOMUnitNormalizer unitNormalizer, ICEBOMBusinessRulesConfig businessRules, ICEBOMTraceService traceService)
+        private readonly ICEBOMUnsupportedFeaturesConfig _unsupportedFeatures;
+
+        private readonly UnsupportedFeaturesValidator _unsupportedFeaturesValidator;
+
+        public ICEBOMValidator(IOdooRepository odooRepository, ICEBOMUnitNormalizer unitNormalizer, ICEBOMBusinessRulesConfig businessRules, ICEBOMUnsupportedFeaturesConfig unsupportedFeatures, 
+            ICEBOMTraceService traceService)
         {
             _odooRepository = odooRepository;
             _unitNormalizer = unitNormalizer;
             _businessRules = businessRules;
+
+            _unsupportedFeatures = unsupportedFeatures;
+            _unsupportedFeaturesValidator = new UnsupportedFeaturesValidator(unsupportedFeatures, traceService);
+
             _traceService = traceService;
         }
 
@@ -50,7 +59,9 @@ namespace ICEBOM.Core.Domain.Services
             if (component.Classification.FunctionalType == ICEBOMFunctionalTypeEnum.Unknown)
                 result.Errors.Add(CreateError("COMPONENT_MISSING_FUNCTIONAL_TYPE", $"El componente '{component.InternalId}' no tiene tipo funcional."));
 
-            result.Status = result.Errors.Count > 0 ? "blocked" : "ready";
+            _unsupportedFeaturesValidator.ValidateComponent(component, result);
+
+            result.Status = result.Errors.Count > 0 ? "blocked" : result.Warnings.Count > 0 ? "warning" : "ready";
             result.Action = ICEBOMActionEnum.ValidationOnly;
 
             return result;
