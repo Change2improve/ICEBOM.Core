@@ -27,7 +27,7 @@ namespace ICEBOM.Core.Domain.Odoo.Services
             if (_executionOptions.DryRun)
             {
                 _traceService.Add(
-                    "DryRun",
+                    "ExecuteCreateProductDryRun",
                     "Product",
                     request.Reference,
                     $"DRY-RUN: se habría creado el producto '{request.Reference}'.");
@@ -41,7 +41,23 @@ namespace ICEBOM.Core.Domain.Odoo.Services
                 };
             }
 
-            return await _odooRepository.CreateProductAsync(request, cancellationToken);
+            _traceService.Add(
+                "ExecuteCreateProduct",
+                "Product",
+                request.Reference,
+                $"Creando producto '{request.Reference}' en Odoo.");
+
+            var created = await _odooRepository.CreateProductAsync(request, cancellationToken);
+
+            _traceService.Add(
+                "ExecuteCreateProduct",
+                "Product",
+                request.Reference,
+                created.Exists
+                    ? $"Producto '{request.Reference}' creado en Odoo. Id={created.Id}."
+                    : $"No se pudo confirmar la creación del producto '{request.Reference}'.");
+
+            return created;
         }
 
         public async Task<OdooProductInfo> UpdateProductAsync(OdooProductWriteRequest request, CancellationToken cancellationToken = default)
@@ -52,7 +68,7 @@ namespace ICEBOM.Core.Domain.Odoo.Services
             if (_executionOptions.DryRun)
             {
                 _traceService.Add(
-                    "DryRun",
+                    "ExecuteUpdateProductDryRun",
                     "Product",
                     request.Reference,
                     $"DRY-RUN: se habría actualizado el producto '{request.Reference}'.");
@@ -60,7 +76,23 @@ namespace ICEBOM.Core.Domain.Odoo.Services
                 return await _odooRepository.GetProductAsync(request.Reference, cancellationToken);
             }
 
-            return await _odooRepository.UpdateProductAsync(request, cancellationToken);
+            _traceService.Add(
+                "ExecuteUpdateProduct",
+                "Product",
+                request.Reference,
+                $"Actualizando producto '{request.Reference}' en Odoo.");
+
+            var updated = await _odooRepository.UpdateProductAsync(request, cancellationToken);
+
+            _traceService.Add(
+                "ExecuteUpdateProduct",
+                "Product",
+                request.Reference,
+                updated.Exists
+                    ? $"Producto '{request.Reference}' actualizado en Odoo. Id={updated.Id}."
+                    : $"No se pudo confirmar la actualización del producto '{request.Reference}'.");
+
+            return updated;
         }
 
         public async Task<OdooBomInfo> CreateBomAsync(OdooBomWriteRequest request, CancellationToken cancellationToken = default)
@@ -71,7 +103,7 @@ namespace ICEBOM.Core.Domain.Odoo.Services
             if (_executionOptions.DryRun)
             {
                 _traceService.Add(
-                    "DryRun",
+                    "ExecuteCreateBomDryRun",
                     "BOM",
                     request.ProductReference,
                     $"DRY-RUN: se habría creado la BOM del producto '{request.ProductReference}'.");
@@ -88,7 +120,23 @@ namespace ICEBOM.Core.Domain.Odoo.Services
                 };
             }
 
-            return await _odooRepository.CreateBomAsync(request, cancellationToken);
+            _traceService.Add(
+                "ExecuteCreateBom",
+                "BOM",
+                request.ProductReference,
+                $"Creando BOM del producto '{request.ProductReference}' en Odoo.");
+
+            var created = await _odooRepository.CreateBomAsync(request, cancellationToken);
+
+            _traceService.Add(
+                "ExecuteCreateBom",
+                "BOM",
+                request.ProductReference,
+                created.Exists
+                    ? $"BOM del producto '{request.ProductReference}' creada en Odoo. Id={created.Id}."
+                    : $"No se pudo confirmar la creación de la BOM del producto '{request.ProductReference}'.");
+
+            return created;
         }
 
         public async Task<OdooBomInfo> UpdateBomAsync(OdooBomWriteRequest request, CancellationToken cancellationToken = default)
@@ -99,7 +147,7 @@ namespace ICEBOM.Core.Domain.Odoo.Services
             if (_executionOptions.DryRun)
             {
                 _traceService.Add(
-                    "DryRun",
+                    "ExecuteUpdateBomDryRun",
                     "BOM",
                     request.ProductReference,
                     $"DRY-RUN: se habría actualizado la BOM del producto '{request.ProductReference}'.");
@@ -107,7 +155,23 @@ namespace ICEBOM.Core.Domain.Odoo.Services
                 return await _odooRepository.GetBomAsync(request.ProductReference, cancellationToken);
             }
 
-            return await _odooRepository.UpdateBomAsync(request, cancellationToken);
+            _traceService.Add(
+                "ExecuteUpdateBom",
+                "BOM",
+                request.ProductReference,
+                $"Actualizando BOM del producto '{request.ProductReference}' en Odoo.");
+
+            var updated = await _odooRepository.UpdateBomAsync(request, cancellationToken);
+
+            _traceService.Add(
+                "ExecuteUpdateBom",
+                "BOM",
+                request.ProductReference,
+                updated.Exists
+                    ? $"BOM del producto '{request.ProductReference}' actualizada en Odoo. Id={updated.Id}."
+                    : $"No se pudo confirmar la actualización de la BOM del producto '{request.ProductReference}'.");
+
+            return updated;
         }
 
         public async Task<int> ReplaceBomLinesAsync(string productReference, IReadOnlyCollection<OdooBomLineWriteRequest> lines, CancellationToken cancellationToken = default)
@@ -115,21 +179,37 @@ namespace ICEBOM.Core.Domain.Odoo.Services
             if (string.IsNullOrWhiteSpace(productReference))
                 return 0;
 
+            var lineCount = lines?.Count ?? 0;
+
             if (_executionOptions.DryRun)
             {
                 _traceService.Add(
-                    "DryRun",
+                    "ExecuteReplaceBomLinesDryRun",
                     "BOM",
                     productReference,
-                    $"DRY-RUN: se habrían sustituido {lines?.Count ?? 0} líneas de la BOM del producto '{productReference}'.");
+                    $"DRY-RUN: se habrían sustituido {lineCount} líneas de la BOM del producto '{productReference}'.");
 
-                return lines?.Count ?? 0;
+                return lineCount;
             }
 
-            return await _odooRepository.SyncBomLinesAsync(
+            _traceService.Add(
+                "ExecuteReplaceBomLines",
+                "BOM",
+                productReference,
+                $"Sustituyendo {lineCount} líneas de la BOM del producto '{productReference}' en Odoo.");
+
+            var syncedCount = await _odooRepository.SyncBomLinesAsync(
                 productReference,
                 lines,
                 cancellationToken);
+
+            _traceService.Add(
+                "ExecuteReplaceBomLines",
+                "BOM",
+                productReference,
+                $"Sustituidas {syncedCount} líneas de la BOM del producto '{productReference}' en Odoo.");
+
+            return syncedCount;
         }
 
         public OdooProductWriteRequest BuildProductWriteRequest(ICEBOMComponent component, ICEBOMComponentResult result)

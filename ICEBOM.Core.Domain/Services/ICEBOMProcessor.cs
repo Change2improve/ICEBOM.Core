@@ -2,6 +2,7 @@
 using ICEBOM.Core.Domain.Models;
 using ICEBOM.Core.Domain.Models.Odoo;
 using ICEBOM.Core.Domain.Normalizers;
+using ICEBOM.Core.Domain.Odoo.JsonRpc;
 using ICEBOM.Core.Domain.Odoo.Services;
 using ICEBOM.Core.Domain.Repositories;
 
@@ -153,6 +154,16 @@ namespace ICEBOM.Core.Domain.Services
                 }
             }
 
+            ValidateBeforeExecution(request, response);
+
+            if (HasBlockingErrors(response))
+            {
+                BlockOdooExecution(response);
+                CalculateSummary(response);
+                response.Trace.AddRange(_traceService.Entries);
+                return response;
+            }
+
             if (HasAsyncOdooSync)
             {
                 await SyncWithOdooAsync(request, response, cancellationToken);
@@ -163,6 +174,184 @@ namespace ICEBOM.Core.Domain.Services
             response.Trace.AddRange(_traceService.Entries);
 
             return response;
+        }
+
+        private void ValidateBeforeExecution(ICEBOMRequest request, ICEBOMResponse response)
+        {
+            ValidateRequiredReferenceForProductSync(response);
+            ValidateRequiredUnitForProductCreate(response);
+            ValidateRequiredParentProductForBomSync(response);
+            ValidateRequiredLinesForBomSync(response);
+        }
+
+        private void ValidateRequiredReferenceForProductSync(ICEBOMResponse response)
+        {
+            foreach (var component in response.Components)
+            {
+                if (component.Action != ICEBOMActionEnum.Create &&
+                    component.Action != ICEBOMActionEnum.Update)
+                    continue;
+
+                if (!string.IsNullOrWhiteSpace(component.Reference))
+                    continue;
+
+                component.Status = "blocked";
+                component.Action = ICEBOMActionEnum.Blocked;
+
+                component.Errors.Add(new ICEBOMError
+                {
+                    Code = "PRODUCT_REFERENCE_REQUIRED_FOR_SYNC",
+                    Message = "La referencia del producto es obligatoria para sincronizar con Odoo."
+                });
+
+                _traceService.Add(
+                    "PreExecuteValidation",
+                    "Component",
+                    component.Reference,
+                    "Un producto se iba a sincronizar, pero no tiene referencia válida → Blocked.");
+            }
+        }
+
+        private void ValidateRequiredUnitForProductCreate(ICEBOMResponse response)
+        {
+            foreach (var component in response.Components)
+            {
+                if (component.Action != ICEBOMActionEnum.Create)
+                    continue;
+
+                if (component.OdooUnitId > 0)
+                    continue;
+
+                component.Status = "blocked";
+                component.Action = ICEBOMActionEnum.Blocked;
+
+                component.Errors.Add(new ICEBOMError
+                {
+                    Code = "PRODUCT_UNIT_NOT_RESOLVED",
+                    Message = $"No se pudo resolver la unidad del producto '{component.Reference}'. La unidad es obligatoria para crear productos en Odoo."
+                });
+
+                _traceService.Add(
+                    "PreExecuteValidation",
+                    "Component",
+                    component.Reference,
+                    $"El producto '{component.Reference}' se iba a crear, pero no tiene OdooUnitId válido → Blocked.");
+            }
+        }
+
+        private void ValidateRequiredParentProductForBomSync(ICEBOMResponse response)
+        {
+            foreach (var bom in response.Boms)
+            {
+                if (bom.Action != ICEBOMActionEnum.Create &&
+                    bom.Action != ICEBOMActionEnum.Update)
+                    continue;
+
+                if (bom.OdooProductId > 0)
+                    continue;
+
+                bom.Status = "blocked";
+                bom.Action = ICEBOMActionEnum.Blocked;
+
+                bom.Errors.Add(new ICEBOMError
+                {
+                    Code = "BOM_PARENT_PRODUCT_NOT_RESOLVED",
+                    Message = $"No se pudo resolver el producto padre de la BOM '{bom.BomId}'. La BOM no se puede sincronizar con Odoo."
+                });
+
+                _traceService.Add(
+                    "PreExecuteValidation",
+                    "BOM",
+                    bom.BomId,
+                    $"La BOM '{bom.BomId}' se iba a sincronizar, pero no tiene OdooProductId válido → Blocked.");
+            }
+        }
+
+        private void ValidateRequiredLinesForBomSync(ICEBOMResponse response)
+        {
+            foreach (var bom in response.Boms)
+            {
+                if (bom.Action != ICEBOMActionEnum.Create &&
+                    bom.Action != ICEBOMActionEnum.Update)
+                    continue;
+
+                var hasValidLines = bom.Lines != null &&
+                                    bom.Lines.Any(line =>
+                                        line.Status != "blocked" &&
+                                        !string.IsNullOrWhiteSpace(line.ComponentReference) &&
+                                        line.Quantity > 0);
+
+                if (hasValidLines)
+                    continue;
+
+                bom.Status = "blocked";
+                bom.Action = ICEBOMActionEnum.Blocked;
+
+                bom.Errors.Add(new ICEBOMError
+                {
+                    Code = "BOM_HAS_NO_VALID_LINES",
+                    Message = $"La BOM '{bom.BomId}' no tiene líneas válidas para sincronizar con Odoo."
+                });
+
+                _traceService.Add(
+                    "PreExecuteValidation",
+                    "BOM",
+                    bom.BomId,
+                    $"La BOM '{bom.BomId}' se iba a sincronizar, pero no tiene líneas válidas → Blocked.");
+            }
+        }
+
+        private static bool HasBlockingErrors(ICEBOMResponse response)
+        {
+            if (response == null)
+                return true;
+
+            var componentErrors = response.Components
+                .Any(c => c.Errors != null && c.Errors.Any());
+
+            var bomErrors = response.Boms
+                .Any(b => b.Errors != null && b.Errors.Any());
+
+            var bomLineErrors = response.Boms
+                .Any(b => b.Lines != null &&
+                          b.Lines.Any(l => l.Errors != null && l.Errors.Any()));
+
+            return componentErrors || bomErrors || bomLineErrors;
+        }
+
+        private void BlockOdooExecution(ICEBOMResponse response)
+        {
+            _traceService.Add(
+                "ExecuteBlocked",
+                "System",
+                string.Empty,
+                "La ejecución contra Odoo se ha bloqueado porque existen errores de validación.");
+
+            foreach (var component in response.Components)
+            {
+                if (component.Errors != null && component.Errors.Any())
+                {
+                    component.Status = "blocked";
+                    component.Action = ICEBOMActionEnum.Blocked;
+                }
+            }
+
+            foreach (var bom in response.Boms)
+            {
+                if (bom.Errors != null && bom.Errors.Any())
+                {
+                    bom.Status = "blocked";
+                    bom.Action = ICEBOMActionEnum.Blocked;
+                }
+
+                foreach (var line in bom.Lines)
+                {
+                    if (line.Errors != null && line.Errors.Any())
+                    {
+                        line.Status = "blocked";
+                    }
+                }
+            }
         }
 
         private static void CalculateSummary(ICEBOMResponse response)
@@ -212,10 +401,7 @@ namespace ICEBOM.Core.Domain.Services
             };
         }
 
-        private async Task SyncWithOdooAsync(
-    ICEBOMRequest request,
-    ICEBOMResponse response,
-    CancellationToken cancellationToken)
+        private async Task SyncWithOdooAsync(ICEBOMRequest request, ICEBOMResponse response, CancellationToken cancellationToken)
         {
             if (_odooRepositoryAsync == null || _odooSyncService == null)
                 return;
@@ -233,27 +419,46 @@ namespace ICEBOM.Core.Domain.Services
                 if (result.Errors.Count > 0 || string.IsNullOrWhiteSpace(component.Reference))
                     continue;
 
-                OdooProductInfo? product = null;
+                try
+                {
+                    OdooProductInfo? product = null;
 
-                if (result.Action == ICEBOMActionEnum.Create)
-                {
-                    var writeRequest = _odooSyncService.BuildProductWriteRequest(component, result);
-                    product = await _odooSyncService.CreateProductAsync(writeRequest, cancellationToken);
-                }
-                else if (result.Action == ICEBOMActionEnum.Update)
-                {
-                    var writeRequest = _odooSyncService.BuildProductWriteRequest(component, result);
-                    product = await _odooSyncService.UpdateProductAsync(writeRequest, cancellationToken);
-                }
-                else
-                {
-                    product = await _odooRepositoryAsync.GetProductAsync(component.Reference, cancellationToken);
-                }
+                    if (result.Action == ICEBOMActionEnum.Create)
+                    {
+                        var writeRequest = _odooSyncService.BuildProductWriteRequest(component, result);
+                        product = await _odooSyncService.CreateProductAsync(writeRequest, cancellationToken);
+                    }
+                    else if (result.Action == ICEBOMActionEnum.Update)
+                    {
+                        var writeRequest = _odooSyncService.BuildProductWriteRequest(component, result);
+                        product = await _odooSyncService.UpdateProductAsync(writeRequest, cancellationToken);
+                    }
+                    else
+                    {
+                        product = await _odooRepositoryAsync.GetProductAsync(component.Reference, cancellationToken);
+                    }
 
-                if (product != null && product.Exists)
+                    if (product != null && product.Exists)
+                    {
+                        ApplyProductResult(result, product);
+                        productsByReference[component.Reference] = product;
+                    }
+                }
+                catch (OdooJsonRpcException ex)
                 {
-                    ApplyProductResult(result, product);
-                    productsByReference[component.Reference] = product;
+                    AddOdooExecutionError(
+                        result,
+                        "ODOO_PRODUCT_SYNC_ERROR",
+                        $"Error al sincronizar el producto '{component.Reference}' con Odoo: {ex.Message}",
+                        component.Reference);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    AddOdooExecutionError(
+                        result,
+                        "PRODUCT_SYNC_ERROR",
+                        $"Error inesperado al sincronizar el producto '{component.Reference}': {ex.Message}",
+                        component.Reference);
                 }
             }
 
@@ -268,47 +473,119 @@ namespace ICEBOM.Core.Domain.Services
                 if (result.Errors.Count > 0 || string.IsNullOrWhiteSpace(bom.ProductReference))
                     continue;
 
-                if (!productsByReference.TryGetValue(bom.ProductReference, out var parentProduct))
+                try
                 {
-                    parentProduct = await _odooRepositoryAsync.GetProductAsync(
+                    if (!productsByReference.TryGetValue(bom.ProductReference, out var parentProduct))
+                    {
+                        parentProduct = await _odooRepositoryAsync.GetProductAsync(
+                            bom.ProductReference,
+                            cancellationToken);
+
+                        if (parentProduct.Exists)
+                            productsByReference[bom.ProductReference] = parentProduct;
+                    }
+
+                    if (!parentProduct.Exists)
+                    {
+                        result.Status = "blocked";
+                        result.Action = ICEBOMActionEnum.Blocked;
+
+                        result.Errors.Add(new ICEBOMError
+                        {
+                            Code = "BOM_PARENT_PRODUCT_NOT_FOUND",
+                            Message = $"No se encontró en Odoo el producto padre '{bom.ProductReference}' para sincronizar la BOM."
+                        });
+
+                        _traceService.Add(
+                            "ExecuteError",
+                            "BOM",
+                            bom.BomId,
+                            $"No se encontró el producto padre '{bom.ProductReference}' para sincronizar la BOM '{bom.BomId}'.");
+
+                        continue;
+                    }
+
+                    if (result.Action == ICEBOMActionEnum.Create)
+                    {
+                        var writeRequest = _odooSyncService.BuildBomWriteRequest(bom, result, parentProduct);
+                        var odooBom = await _odooSyncService.CreateBomAsync(writeRequest, cancellationToken);
+
+                        ApplyBomResult(result, odooBom);
+                    }
+                    else if (result.Action == ICEBOMActionEnum.Update)
+                    {
+                        var writeRequest = _odooSyncService.BuildBomWriteRequest(bom, result, parentProduct);
+                        var odooBom = await _odooSyncService.UpdateBomAsync(writeRequest, cancellationToken);
+
+                        ApplyBomResult(result, odooBom);
+                    }
+                    else
+                    {
+                        continue;
+                    }
+
+                    var lineRequests = _odooSyncService.BuildBomLineWriteRequests(
+                        result,
+                        productsByReference);
+
+                    await _odooSyncService.ReplaceBomLinesAsync(
                         bom.ProductReference,
+                        lineRequests,
                         cancellationToken);
-
-                    if (parentProduct.Exists)
-                        productsByReference[bom.ProductReference] = parentProduct;
                 }
-
-                if (!parentProduct.Exists)
-                    continue;
-
-                if (result.Action == ICEBOMActionEnum.Create)
+                catch (OdooJsonRpcException ex)
                 {
-                    var writeRequest = _odooSyncService.BuildBomWriteRequest(bom, result, parentProduct);
-                    var odooBom = await _odooSyncService.CreateBomAsync(writeRequest, cancellationToken);
-
-                    ApplyBomResult(result, odooBom);
+                    AddOdooExecutionError(
+                        result,
+                        "ODOO_BOM_SYNC_ERROR",
+                        $"Error al sincronizar la BOM '{bom.BomId}' con Odoo: {ex.Message}",
+                        bom.BomId);
                 }
-                else if (result.Action == ICEBOMActionEnum.Update)
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
-                    var writeRequest = _odooSyncService.BuildBomWriteRequest(bom, result, parentProduct);
-                    var odooBom = await _odooSyncService.UpdateBomAsync(writeRequest, cancellationToken);
-
-                    ApplyBomResult(result, odooBom);
+                    AddOdooExecutionError(
+                        result,
+                        "BOM_SYNC_ERROR",
+                        $"Error inesperado al sincronizar la BOM '{bom.BomId}': {ex.Message}",
+                        bom.BomId);
                 }
-                else
-                {
-                    continue;
-                }
-
-                var lineRequests = _odooSyncService.BuildBomLineWriteRequests(
-                    result,
-                    productsByReference);
-
-                await _odooSyncService.ReplaceBomLinesAsync(
-                    bom.ProductReference,
-                    lineRequests,
-                    cancellationToken);
             }
+        }
+
+        private void AddOdooExecutionError(ICEBOMComponentResult result, string code, string message, string reference)
+        {
+            result.Status = "blocked";
+            result.Action = ICEBOMActionEnum.Blocked;
+
+            result.Errors.Add(new ICEBOMError
+            {
+                Code = code,
+                Message = message
+            });
+
+            _traceService.Add(
+                "ExecuteError",
+                "Product",
+                reference,
+                message);
+        }
+
+        private void AddOdooExecutionError(ICEBOMBomResult result, string code, string message, string reference)
+        {
+            result.Status = "blocked";
+            result.Action = ICEBOMActionEnum.Blocked;
+
+            result.Errors.Add(new ICEBOMError
+            {
+                Code = code,
+                Message = message
+            });
+
+            _traceService.Add(
+                "ExecuteError",
+                "BOM",
+                reference,
+                message);
         }
 
         private static void ApplyProductResult(ICEBOMComponentResult result, OdooProductInfo product)
