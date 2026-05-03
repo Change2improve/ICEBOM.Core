@@ -12,6 +12,9 @@ namespace ICEBOM.Core.Domain.Odoo.Services
         private readonly OdooExecutionOptions _executionOptions;
         private readonly ICEBOMTraceService _traceService;
 
+        private int _dryRunProductId = 900000000;
+        private int _dryRunBomId = 900100000;
+
         public OdooSyncService(IOdooRepositoryAsync odooRepository, OdooExecutionOptions executionOptions, ICEBOMTraceService traceService)
         {
             _odooRepository = odooRepository;
@@ -34,6 +37,7 @@ namespace ICEBOM.Core.Domain.Odoo.Services
 
                 return new OdooProductInfo
                 {
+                    Id = _dryRunProductId++,
                     Reference = request.Reference,
                     Name = request.Name,
                     CategoryId = request.CategoryId,
@@ -110,6 +114,7 @@ namespace ICEBOM.Core.Domain.Odoo.Services
 
                 return new OdooBomInfo
                 {
+                    Id = _dryRunBomId++,
                     ProductReference = request.ProductReference,
                     ProductId = request.ProductId,
                     ProductTemplateId = request.ProductTemplateId,

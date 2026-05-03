@@ -5,29 +5,45 @@ namespace ICEBOM.Core.Domain.Normalizers
     public class ICEBOMUnitNormalizer
     {
         private readonly ICEBOMUnitConfig _config;
+        private readonly string _defaultUnit;
 
-        public ICEBOMUnitNormalizer(ICEBOMUnitConfig config)
+        public ICEBOMUnitNormalizer(ICEBOMUnitConfig config, string? defaultUnit = null)
         {
-            _config = config;
+            _config = config ?? new ICEBOMUnitConfig();
+
+            _defaultUnit = string.IsNullOrWhiteSpace(defaultUnit)
+                ? "Units"
+                : defaultUnit.Trim();
         }
 
         public string Normalize(string? unit)
         {
             if (string.IsNullOrWhiteSpace(unit))
-                return _config.KnownUnits.FirstOrDefault() ?? "Units";
+                return _defaultUnit;
 
-            var value = unit.Trim().ToLowerInvariant();
+            var trimmed = unit.Trim();
+            var key = trimmed.ToLowerInvariant();
 
-            if (_config.Aliases.TryGetValue(value, out var normalized))
-                return normalized;
+            if (_config.Aliases != null &&
+                _config.Aliases.TryGetValue(key, out var normalized) &&
+                !string.IsNullOrWhiteSpace(normalized))
+            {
+                return normalized.Trim();
+            }
 
-            return unit;
+            return trimmed;
         }
 
         public bool IsKnown(string? unit)
         {
             var normalized = Normalize(unit);
-            return _config.KnownUnits.Contains(normalized);
+
+            return _config.KnownUnits != null &&
+                   _config.KnownUnits.Any(known =>
+                       string.Equals(
+                           known?.Trim(),
+                           normalized,
+                           StringComparison.OrdinalIgnoreCase));
         }
     }
 }

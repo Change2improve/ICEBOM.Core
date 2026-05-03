@@ -12,21 +12,14 @@ namespace ICEBOM.Core.Domain.Services
         private readonly ICEBOMTraceService _traceService;
         private readonly ICEBOMUnitNormalizer _unitNormalizer;
 
-        public ICEBOMDecisionEngineAsync(
-            IOdooRepositoryAsync odooRepository,
-            ICEBOMTraceService traceService,
-            ICEBOMUnitNormalizer unitNormalizer)
+        public ICEBOMDecisionEngineAsync(IOdooRepositoryAsync odooRepository, ICEBOMTraceService traceService, ICEBOMUnitNormalizer unitNormalizer)
         {
             _odooRepository = odooRepository;
             _traceService = traceService;
             _unitNormalizer = unitNormalizer;
         }
 
-        public async Task DecideComponentAsync(
-            ICEBOMComponent component,
-            ICEBOMComponentResult result,
-            ICEBOMSettingsSnapshot settings,
-            CancellationToken cancellationToken = default)
+        public async Task DecideComponentAsync(ICEBOMComponent component, ICEBOMComponentResult result, ICEBOMSettingsSnapshot settings, CancellationToken cancellationToken = default)
         {
             if (component == null || result == null)
                 return;
@@ -38,10 +31,21 @@ namespace ICEBOM.Core.Domain.Services
                 return;
             }
 
-            var unitName = _unitNormalizer.Normalize(
-                string.IsNullOrWhiteSpace(component.Classification.Unit)
-                    ? "Ud"
-                    : component.Classification.Unit);
+            if (component.Control?.ExportErp == false)
+            {
+                result.Action = ICEBOMActionEnum.Skip;
+                result.Status = "ready";
+
+                _traceService.Add(
+                    "DecisionComponentReal",
+                    "Component",
+                    component.Reference,
+                    "ExportErp=false → Skip. El producto no se sincronizará con Odoo.");
+
+                return;
+            }
+
+            var unitName = _unitNormalizer.Normalize(component.Classification.Unit);
 
             var unit = await _odooRepository.GetUnitAsync(unitName, cancellationToken);
 
@@ -110,12 +114,7 @@ namespace ICEBOM.Core.Domain.Services
             }
         }
 
-        public async Task DecideBomAsync(
-            ICEBOMRequest request,
-            ICEBOMBom bom,
-            ICEBOMBomResult result,
-            ICEBOMSettingsSnapshot settings,
-            CancellationToken cancellationToken = default)
+        public async Task DecideBomAsync(ICEBOMRequest request, ICEBOMBom bom, ICEBOMBomResult result, ICEBOMSettingsSnapshot settings, CancellationToken cancellationToken = default)
         {
             if (bom == null || result == null)
                 return;
@@ -124,6 +123,26 @@ namespace ICEBOM.Core.Domain.Services
             {
                 result.Action = ICEBOMActionEnum.Blocked;
                 result.Status = "blocked";
+                return;
+            }
+
+            var parentComponent = request.Components.FirstOrDefault(c =>
+                string.Equals(
+                    c.Reference,
+                    bom.ProductReference,
+                    StringComparison.OrdinalIgnoreCase));
+
+            if (parentComponent?.Control?.IgnoreChildren == true)
+            {
+                result.Action = ICEBOMActionEnum.Skip;
+                result.Status = result.Warnings.Count > 0 ? "warning" : "ready";
+
+                _traceService.Add(
+                    "DecisionBomReal",
+                    "BOM",
+                    bom.BomId,
+                    "IgnoreChildren=true en el componente padre → Skip. La BOM no se sincronizará con Odoo.");
+
                 return;
             }
 

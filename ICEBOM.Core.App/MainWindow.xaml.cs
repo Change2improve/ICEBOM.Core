@@ -73,7 +73,7 @@ namespace ICEBOM.Core.App
                 ICEBOMSettingsMapper.ApplyFunctionalTypeAliases(request, customerConfig);
                 ICEBOMSettingsMapper.ApplyDefaultFunctionalType(request, customerConfig);
 
-                var unitNormalizer = new ICEBOMUnitNormalizer(customerConfig.Units);
+                var unitNormalizer = new ICEBOMUnitNormalizer(customerConfig.Units, customerConfig.Defaults?.DefaultUnit);
                 var fakeRepository = new FakeOdooRepository(customerConfig.FakeOdoo);
                 var traceService = new ICEBOMTraceService();
 

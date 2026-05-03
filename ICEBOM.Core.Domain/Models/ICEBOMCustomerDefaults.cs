@@ -2,7 +2,7 @@
 {
     public class ICEBOMCustomerDefaults
     {
-        public string DefaultUnit { get; set; } = "Ud";
+        public string DefaultUnit { get; set; } = "Units";
         public string DefaultFunctionalType { get; set; } = "Unknown";
     }
 }

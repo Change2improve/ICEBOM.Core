@@ -180,7 +180,7 @@ namespace ICEBOM.Core.Domain.Services
         {
             ValidateRequiredReferenceForProductSync(response);
             ValidateRequiredUnitForProductCreate(response);
-            ValidateRequiredParentProductForBomSync(response);
+            ValidateRequiredParentProductForBomSync(request, response);
             ValidateRequiredLinesForBomSync(response);
         }
 
@@ -239,7 +239,7 @@ namespace ICEBOM.Core.Domain.Services
             }
         }
 
-        private void ValidateRequiredParentProductForBomSync(ICEBOMResponse response)
+        private void ValidateRequiredParentProductForBomSync(ICEBOMRequest request, ICEBOMResponse response)
         {
             foreach (var bom in response.Boms)
             {
@@ -247,24 +247,52 @@ namespace ICEBOM.Core.Domain.Services
                     bom.Action != ICEBOMActionEnum.Update)
                     continue;
 
-                if (bom.OdooProductId > 0)
+                var parentComponent = response.Components
+                    .FirstOrDefault(c =>
+                        string.Equals(c.Reference, bom.ProductReference, StringComparison.OrdinalIgnoreCase));
+
+                if (parentComponent == null)
+                {
+                    BlockBomParentNotResolved(bom);
+                    continue;
+                }
+
+                if (parentComponent.Action == ICEBOMActionEnum.Blocked ||
+                    parentComponent.Errors.Any())
+                {
+                    BlockBomParentNotResolved(bom);
+                    continue;
+                }
+
+                var parentWillExist =
+                    parentComponent.OdooProductId > 0 ||
+                    parentComponent.Action == ICEBOMActionEnum.Create ||
+                    parentComponent.Action == ICEBOMActionEnum.Update ||
+                    parentComponent.Action == ICEBOMActionEnum.Skip;
+
+                if (parentWillExist)
                     continue;
 
-                bom.Status = "blocked";
-                bom.Action = ICEBOMActionEnum.Blocked;
-
-                bom.Errors.Add(new ICEBOMError
-                {
-                    Code = "BOM_PARENT_PRODUCT_NOT_RESOLVED",
-                    Message = $"No se pudo resolver el producto padre de la BOM '{bom.BomId}'. La BOM no se puede sincronizar con Odoo."
-                });
-
-                _traceService.Add(
-                    "PreExecuteValidation",
-                    "BOM",
-                    bom.BomId,
-                    $"La BOM '{bom.BomId}' se iba a sincronizar, pero no tiene OdooProductId válido → Blocked.");
+                BlockBomParentNotResolved(bom);
             }
+        }
+
+        private void BlockBomParentNotResolved(ICEBOMBomResult bom)
+        {
+            bom.Status = "blocked";
+            bom.Action = ICEBOMActionEnum.Blocked;
+
+            bom.Errors.Add(new ICEBOMError
+            {
+                Code = "BOM_PARENT_PRODUCT_NOT_RESOLVED",
+                Message = $"No se pudo resolver el producto padre de la BOM '{bom.BomId}'. La BOM no se puede sincronizar con Odoo."
+            });
+
+            _traceService.Add(
+                "PreExecuteValidation",
+                "BOM",
+                bom.BomId,
+                $"La BOM '{bom.BomId}' se iba a sincronizar, pero no tiene producto padre válido → Blocked.");
         }
 
         private void ValidateRequiredLinesForBomSync(ICEBOMResponse response)

@@ -57,9 +57,7 @@ namespace ICEBOM.Core.Domain.Odoo.JsonRpc
             if (root.TryGetProperty(OdooJsonRpcFields.Response.Error, out var error) &&
                 error.ValueKind != JsonValueKind.Null)
             {
-                var message = error.TryGetProperty("message", out var msg)
-                    ? msg.GetString() ?? "Error JSON-RPC"
-                    : "Error JSON-RPC";
+                var message = ExtractOdooErrorMessage(error);
 
                 var code = error.TryGetProperty("code", out var codeElement) &&
                            codeElement.TryGetInt32(out var parsedCode)
@@ -73,6 +71,27 @@ namespace ICEBOM.Core.Domain.Odoo.JsonRpc
                 return null;
 
             return result.Clone();
+        }
+
+        private static string ExtractOdooErrorMessage(JsonElement error)
+        {
+            if (error.TryGetProperty("data", out var data) &&
+                data.ValueKind == JsonValueKind.Object &&
+                data.TryGetProperty("message", out var dataMessage) &&
+                dataMessage.ValueKind == JsonValueKind.String &&
+                !string.IsNullOrWhiteSpace(dataMessage.GetString()))
+            {
+                return dataMessage.GetString()!;
+            }
+
+            if (error.TryGetProperty("message", out var message) &&
+                message.ValueKind == JsonValueKind.String &&
+                !string.IsNullOrWhiteSpace(message.GetString()))
+            {
+                return message.GetString()!;
+            }
+
+            return "Error JSON-RPC de Odoo";
         }
 
         public async Task<JsonElement?> ExecuteKwAsync(string database, int userId, string password, string model, string method,
